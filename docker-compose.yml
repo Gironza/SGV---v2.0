@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # --- BASE DE DATOS ---
+  db:
+    image: postgres:15-alpine
+    container_name: sgv_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456789
+      POSTGRES_DB: sgv
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d      # Monta toda la carpeta
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh # Monta el script de orden
+
+  # --- BACKEND ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sgv_backend
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=123456789
+      - DB_NAME=sgv
+      - DB_PORT=5432
+      - JWT_SECRET_KEY=bc2cd4df0d666396503d7a0ce3c383a1328ff541d654f6ae0e5b3ab0d78a99d8
+      - DATABASE_URL=postgresql://postgres:123456789@db:5432/sgv
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  # --- FRONTEND ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sgv_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
