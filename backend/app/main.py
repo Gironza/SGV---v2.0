@@ -12,6 +12,7 @@ from app.routes.candidato_routes import router as candidato_router
 from app.routes.resultado_routes import router as resultado_router
 from app.routes.institucion_routes import router as institucion_router
 from app.routes.info_routes import router as info_router
+from app.utils.correo import CorreoNoDisponible
 
 
 # --- Logging ---
@@ -74,6 +75,12 @@ async def validacion_handler(request: Request, exc: RequestValidationError):
         content={"detail": "Datos inválidos: " + "; ".join(errores)}
     )
 
+@app.exception_handler(CorreoNoDisponible)
+async def correo_no_disponible_handler(request, exc):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "El servicio de correo no está disponible, intenta más tarde"}
+    )
 
 #routers
 app.include_router(auth_router)

@@ -1,10 +1,15 @@
 import logging
 import math
+import os
 from app.config.database import BaseDatosNoDisponible
 from app.models.usuario import Usuario
 from app.models.institucion import Institucion
 from app.utils.security import hashear_password, verificar_password
-from app.utils.jwt_handler import crear_token
+from app.utils.jwt_handler import (
+    crear_token, crear_token_recuperacion,
+    verificar_token_recuperacion, huella_coincide
+)
+from app.utils.correo import enviar_correo, CorreoNoDisponible
 from app.utils.bloqueo_login import (
     MINUTOS_BLOQUEO, segundos_bloqueo_restantes, registrar_fallo, limpiar_intentos
 )
@@ -187,3 +192,104 @@ class AuthController:
         except Exception as e:
             logger.error(f"Error al cambiar contraseña: {str(e)}")
             return self._error_sistema()
+
+# RECUPERACION DE CONTRASEÑA -------------------------------------------------------------------------------
+
+    def solicitar_recuperacion(self, correo):
+        """
+        Prepara el correo de recuperación. 'envio' es None si no hay nada que mandar
+        (correo no registrado o cuenta desactivada); la ruta responde igual en ambos
+        casos para no revelar qué correos existen.
+        """
+        try:
+            usuario = Usuario.buscar_por_correo(correo)
+            if usuario is None or not usuario.activo:
+                return {'success': True, 'envio': None}
+
+            token = crear_token_recuperacion(usuario.id_usuario, usuario.contrasena)
+            base = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+            enlace = f"{base}/restablecer-contrasena?token={token}"
+            cuerpo = (
+                f"Hola {usuario.nombre},\n\n"
+                "Recibimos una solicitud para restablecer la contraseña de tu cuenta en SGV.\n"
+                "Usa este enlace (vale 30 minutos y solo se puede usar una vez):\n\n"
+                f"{enlace}\n\n"
+                "Si tú no lo pediste, ignora este correo: tu contraseña no cambiará."
+            )
+            return {
+                'success': True,
+                'envio': {
+                    'destinatario': usuario.correo,
+                    'asunto': 'Restablece tu contraseña - SGV',
+                    'cuerpo': cuerpo,
+                }
+            }
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al solicitar recuperación: {str(e)}")
+            return {'success': False, 'message': 'Error en el sistema, intenta más tarde'}
+
+    def enviar_correo_recuperacion(self, destinatario, asunto, cuerpo):
+        # Corre en segundo plano, después de responder: si falla ya no hay a quién
+        # avisarle, así que solo se registra (enviar_correo ya deja el log del error)
+        try:
+            enviar_correo(destinatario, asunto, cuerpo)
+        except CorreoNoDisponible:
+            pass
+
+    def restablecer_contrasena(self, token, contrasena_nueva):
+        try:
+            invalido = {'success': False,
+                        'message': 'El enlace es inválido o ya expiró. Solicita uno nuevo'}
+
+            datos = verificar_token_recuperacion(token)
+            if datos is None:
+                return invalido
+
+            usuario = Usuario.buscar_por_id(datos['id_usuario'])
+            if usuario is None or not usuario['activo']:
+                return invalido
+
+            # Aquí muere el enlace tras usarse: al cambiar la contraseña cambia el hash
+            if not huella_coincide(datos['huella'], usuario['contrasena']):
+                return invalido
+
+            if verificar_password(contrasena_nueva, usuario['contrasena']):
+                return {'success': False,
+                        'message': 'La nueva contraseña debe ser diferente a la actual'}
+
+            if not Usuario.actualizar_contrasena(usuario['id_usuario'],
+                                                 hashear_password(contrasena_nueva)):
+                return invalido
+
+            # Si el usuario estaba bloqueado por intentos fallidos, que pueda entrar ya
+            limpiar_intentos(usuario['correo'])
+
+            return {'success': True, 'message': 'Contraseña restablecida correctamente'}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al restablecer contraseña: {str(e)}")
+            return {'success': False, 'error_sistema': True,
+                    'message': 'Error en el sistema, intenta más tarde'}
+
+    # SOPORTE (RF-005) ----------------------
+    def enviar_soporte(self, nombre, correo, asunto, mensaje):
+        # Si no hay SOPORTE_DESTINO se usa el correo del SMTP
+        destino = os.getenv("SOPORTE_DESTINO") or os.getenv("SMTP_USER")
+        if not destino:
+            logger.error("Soporte sin destino: define SOPORTE_DESTINO en el .env")
+            raise CorreoNoDisponible("Soporte sin destino configurado")
+
+        cuerpo = (
+            "Mensaje de soporte recibido desde SGV\n\n"
+            f"Nombre: {nombre}\n"
+            f"Correo: {correo}\n\n"
+            f"Mensaje:\n{mensaje}"
+        )
+        # Reply-To: al responder desde tu bandeja, el correo va directo a quien escribió
+        enviar_correo(destino, f"[Soporte SGV] {asunto}", cuerpo, responder_a=correo)
+
+        return {'success': True,
+                'message': 'Recibimos tu mensaje. Te responderemos al correo que indicaste'}

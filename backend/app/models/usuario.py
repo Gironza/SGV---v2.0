@@ -40,7 +40,17 @@ class Usuario:
             self.id_usuario = resultado[0]['id_usuario']  #guarda la informacion dellid del usuario a los parametros consultados (info del usuario)
             return True
         return False
- 
+    
+    @staticmethod
+    def buscar_por_id(id_usuario):
+        db = Database()
+        query = """
+        SELECT id_usuario, correo, contrasena, activo
+        FROM usuarios WHERE id_usuario = %s
+        """
+        resultado = db.ejecutar_query(query, (id_usuario,))
+        return resultado[0] if resultado else None
+    
     @staticmethod
     def buscar_por_correo(correo):
         db = Database()
@@ -173,3 +183,4 @@ class Usuario:
         """
         resultado = db.ejecutar_query(query, (contrasena_hasheada, id_usuario))
         return bool(resultado)
+    

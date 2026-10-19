@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from app.middleware.auth_middleware import obtener_usuario_actual
 from app.schemas.auth_schema import (
     UsuarioLogin, UsuarioRegistro, TokenResponse, MensajeResponse,
-    PerfilResponse, PerfilUpdate, CambioContrasena
+    PerfilResponse, PerfilUpdate, CambioContrasena, SolicitudRecuperacion, RestablecerContrasena, SoporteMensaje
 )
 
 from app.controllers.auth_controller import AuthController
@@ -101,3 +101,39 @@ def cambiar_contrasena(datos: CambioContrasena, usuario: dict = Depends(obtener_
 @router.post("/logout", response_model=MensajeResponse)
 def logout():
     return {'success': True, 'message': 'Sesión cerrada correctamente'}
+
+
+# RF-004: públicas (el usuario no puede iniciar sesión, por eso no piden token)
+@router.post("/recuperar", response_model=MensajeResponse)
+def solicitar_recuperacion(datos: SolicitudRecuperacion, tareas: BackgroundTasks):
+    resultado = auth_controller.solicitar_recuperacion(datos.correo)
+    if not resultado['success']:
+        raise HTTPException(status_code=500, detail=resultado['message'])
+
+    # El correo sale en segundo plano: la respuesta tarda lo mismo exista o no el
+    # correo, y así el tiempo de respuesta no delata qué cuentas están registradas
+    if resultado['envio']:
+        tareas.add_task(auth_controller.enviar_correo_recuperacion, **resultado['envio'])
+
+    return {
+        'success': True,
+        'message': 'Si el correo está registrado, te enviamos un enlace para restablecer '
+                   'tu contraseña. Revisa tu bandeja de entrada y la carpeta de spam'
+    }
+
+
+@router.post("/restablecer", response_model=MensajeResponse)
+def restablecer_contrasena(datos: RestablecerContrasena):
+    resultado = auth_controller.restablecer_contrasena(datos.token, datos.contrasena_nueva)
+    if not resultado['success']:
+        # 400 y no 401: el frontend cierra sesión con los 401
+        codigo = 500 if resultado.get('error_sistema') else 400
+        raise HTTPException(status_code=codigo, detail=resultado['message'])
+    return resultado
+
+# RF-005: pública (quien no puede iniciar sesión también necesita pedir ayuda)
+@router.post("/soporte", response_model=MensajeResponse)
+def soporte(datos: SoporteMensaje):
+    return auth_controller.enviar_soporte(
+        datos.nombre, datos.correo, datos.asunto, datos.mensaje
+    )

@@ -2,6 +2,9 @@ from typing import Annotated
 from pydantic import BaseModel, EmailStr, Field, StringConstraints
 
 Texto100 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+Asunto150 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=150)]
+Mensaje2000 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=10, max_length=2000)]
+
 
 class UsuarioLogin(BaseModel):
     correo: EmailStr
@@ -63,3 +66,17 @@ class PerfilUpdate(BaseModel):
 class CambioContrasena(BaseModel):
     contrasena_actual: str = Field(..., min_length=1)
     contrasena_nueva: str = Field(..., min_length=8, max_length=72)
+
+class SolicitudRecuperacion(BaseModel):
+    correo: EmailStr
+
+
+class RestablecerContrasena(BaseModel):
+    token: str = Field(..., min_length=1, max_length=2000)
+    contrasena_nueva: str = Field(..., min_length=8, max_length=72)
+
+class SoporteMensaje(BaseModel):
+    nombre: Texto100
+    correo: EmailStr
+    asunto: Asunto150
+    mensaje: Mensaje2000
