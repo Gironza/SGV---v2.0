@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -10,6 +11,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # sube a
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
+
+
 class BaseDatosNoDisponible(Exception):
     """La base de datos no responde (caída, red, credenciales o timeout)."""
     pass
@@ -17,11 +20,11 @@ class BaseDatosNoDisponible(Exception):
 
 class Database:
     def __init__(self):
-        self.host = os.getenv("DB_HOST", "db")
-        self.user = os.getenv("DB_USER", "postgres")
-        self.password = os.getenv("DB_PASSWORD", "123456789")
-        self.database = os.getenv("DB_NAME", "sgv")
-        self.port = os.getenv("DB_PORT", 5432)
+        self.host = os.getenv("DB_HOST")
+        self.user = os.getenv("DB_USER")
+        self.password = os.getenv("DB_PASSWORD")
+        self.database = os.getenv("DB_NAME")
+        self.port = os.getenv("DB_PORT")
 
     def obtener_conexion(self):
         try:
