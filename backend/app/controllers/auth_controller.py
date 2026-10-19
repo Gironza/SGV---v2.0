@@ -126,3 +126,64 @@ class AuthController:
         except Exception as e:
             logger.error(f"Error en registro: {str(e)}")
             return {'success': False, 'message': 'Error en el sistema, intenta más tarde'}
+
+
+# PERFIL  ----------------------
+    def _error_sistema(self):
+        return {'success': False, 'error_sistema': True,
+                'message': 'Error en el sistema, intenta más tarde'}
+
+    def _no_encontrado(self):
+        return {'success': False, 'no_encontrado': True, 'message': 'Usuario no encontrado'}
+
+    def obtener_perfil(self, id_usuario):
+        try:
+            perfil = Usuario.obtener_perfil(id_usuario)
+            if perfil is None:
+                return self._no_encontrado()
+            return {'success': True, 'perfil': perfil}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al obtener perfil: {str(e)}")
+            return self._error_sistema()
+
+    def actualizar_perfil(self, id_usuario, nombre, apellido, correo):
+        try:
+            if Usuario.correo_en_uso_por_otro(correo, id_usuario):
+                return {'success': False, 'conflicto': True,
+                        'message': 'Ya existe un usuario con este correo'}
+
+            if not Usuario.actualizar_perfil(id_usuario, nombre, apellido, correo):
+                return self._no_encontrado()
+
+            # Se devuelve el perfil actualizado para que el frontend refresque su estado
+            return {'success': True, 'perfil': Usuario.obtener_perfil(id_usuario)}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al actualizar perfil: {str(e)}")
+            return self._error_sistema()
+
+    def cambiar_contrasena(self, id_usuario, contrasena_actual, contrasena_nueva):
+        try:
+            hash_actual = Usuario.obtener_contrasena(id_usuario)
+            if hash_actual is None:
+                return self._no_encontrado()
+
+            if not verificar_password(contrasena_actual, hash_actual):
+                return {'success': False, 'message': 'La contraseña actual es incorrecta'}
+
+            if verificar_password(contrasena_nueva, hash_actual):
+                return {'success': False,
+                        'message': 'La nueva contraseña debe ser diferente a la actual'}
+
+            if not Usuario.actualizar_contrasena(id_usuario, hashear_password(contrasena_nueva)):
+                return self._no_encontrado()
+
+            return {'success': True, 'message': 'Contraseña actualizada correctamente'}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al cambiar contraseña: {str(e)}")
+            return self._error_sistema()

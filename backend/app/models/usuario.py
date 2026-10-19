@@ -121,3 +121,55 @@ class Usuario:
         query = "SELECT activo FROM usuarios WHERE id_usuario = %s"
         resultado = db.ejecutar_query(query, (id_usuario,))
         return resultado[0]['activo'] if resultado else None
+
+    @staticmethod
+    def obtener_perfil(id_usuario):
+        db = Database()
+        query = """
+        SELECT u.id_usuario, u.documento, u.nombre, u.apellido, u.correo,
+               u.curso, u.id_rol, r.nombre AS rol_nombre
+        FROM usuarios u
+        INNER JOIN roles r ON u.id_rol = r.id_rol
+        WHERE u.id_usuario = %s
+        """
+        resultado = db.ejecutar_query(query, (id_usuario,))
+        return resultado[0] if resultado else None
+
+    @staticmethod
+    def correo_en_uso_por_otro(correo, id_usuario):
+        """True si otro usuario (distinto al indicado) ya usa ese correo."""
+        db = Database()
+        query = "SELECT COUNT(*) as count FROM usuarios WHERE correo = %s AND id_usuario <> %s"
+        resultado = db.ejecutar_query(query, (correo, id_usuario))
+        return resultado[0]['count'] > 0 if resultado else False
+
+    @staticmethod
+    def actualizar_perfil(id_usuario, nombre, apellido, correo):
+        db = Database()
+        query = """
+        UPDATE usuarios
+        SET nombre = %s, apellido = %s, correo = %s
+        WHERE id_usuario = %s
+        RETURNING id_usuario
+        """
+        resultado = db.ejecutar_query(query, (nombre, apellido, correo, id_usuario))
+        return bool(resultado)
+
+    @staticmethod
+    def obtener_contrasena(id_usuario):
+        """Devuelve el hash actual; None si el usuario no existe."""
+        db = Database()
+        query = "SELECT contrasena FROM usuarios WHERE id_usuario = %s"
+        resultado = db.ejecutar_query(query, (id_usuario,))
+        return resultado[0]['contrasena'] if resultado else None
+
+    @staticmethod
+    def actualizar_contrasena(id_usuario, contrasena_hasheada):
+        db = Database()
+        query = """
+        UPDATE usuarios SET contrasena = %s
+        WHERE id_usuario = %s
+        RETURNING id_usuario
+        """
+        resultado = db.ejecutar_query(query, (contrasena_hasheada, id_usuario))
+        return bool(resultado)

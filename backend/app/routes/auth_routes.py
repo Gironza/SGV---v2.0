@@ -1,9 +1,26 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.auth_schema import UsuarioLogin, UsuarioRegistro, TokenResponse, MensajeResponse
+from fastapi import APIRouter, Depends, HTTPException
+from app.middleware.auth_middleware import obtener_usuario_actual
+from app.schemas.auth_schema import (
+    UsuarioLogin, UsuarioRegistro, TokenResponse, MensajeResponse,
+    PerfilResponse, PerfilUpdate, CambioContrasena
+)
+
 from app.controllers.auth_controller import AuthController
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 auth_controller = AuthController()
+
+#mensajes y estados de errores
+
+def _lanzar_error_perfil(resultado):
+    if resultado.get('no_encontrado'):
+        raise HTTPException(status_code=404, detail=resultado['message'])
+    if resultado.get('conflicto'):
+        raise HTTPException(status_code=409, detail=resultado['message'])
+    if resultado.get('error_sistema'):
+        raise HTTPException(status_code=500, detail=resultado['message'])
+    raise HTTPException(status_code=400, detail=resultado['message'])
+
 
 
 #responsemodel es del schema evalua que  los datos sean necesarios y puntuales
@@ -45,6 +62,37 @@ def registro(datos: UsuarioRegistro):
         raise HTTPException(status_code=400, detail=resultado['message'])
 
     return resultado
+
+
+#Configuracion del perfil 
+# RF-007: perfil del usuario autenticado (cualquier rol)
+@router.get("/me", response_model=PerfilResponse)
+def ver_perfil(usuario: dict = Depends(obtener_usuario_actual)):
+    resultado = auth_controller.obtener_perfil(usuario['id_usuario'])
+    if not resultado['success']:
+        _lanzar_error_perfil(resultado)
+    return resultado['perfil']
+
+
+@router.put("/me", response_model=PerfilResponse)
+def editar_perfil(datos: PerfilUpdate, usuario: dict = Depends(obtener_usuario_actual)):
+    resultado = auth_controller.actualizar_perfil(
+        usuario['id_usuario'], datos.nombre, datos.apellido, datos.correo
+    )
+    if not resultado['success']:
+        _lanzar_error_perfil(resultado)
+    return resultado['perfil']
+
+
+@router.put("/me/contrasena", response_model=MensajeResponse)
+def cambiar_contrasena(datos: CambioContrasena, usuario: dict = Depends(obtener_usuario_actual)):
+    resultado = auth_controller.cambiar_contrasena(
+        usuario['id_usuario'], datos.contrasena_actual, datos.contrasena_nueva
+    )
+    if not resultado['success']:
+        _lanzar_error_perfil(resultado)
+    return resultado
+
 
 
 # RF-008: el JWT es sin estado, así que el cierre real de sesión es que el frontend

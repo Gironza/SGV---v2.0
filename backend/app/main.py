@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 #app
-app = FastAPI(title="SGV", version="1.0.0")
+app = FastAPI(title="SGV", version="2.0.0")
 
 
 #cors
