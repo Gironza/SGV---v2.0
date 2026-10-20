@@ -1,8 +1,8 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.eleccion_schema import (
-    EleccionCreate, EleccionUpdate, CambiarEstadoRequest,
-    EleccionOut, EleccionCreadaResponse, MensajeResponse
+    EleccionCreate, EleccionUpdate, CambiarEstadoRequest, GraciaRequest,
+    EleccionOut, EleccionCreadaResponse, GraciaResponse, MensajeResponse
 )
 from app.controllers.eleccion_controller import EleccionController
 from app.middleware.auth_middleware import obtener_usuario_actual, requerir_rol
@@ -14,7 +14,9 @@ eleccion_controller = EleccionController()
 @router.post("/", response_model=EleccionCreadaResponse)
 def crear_eleccion(datos: EleccionCreate, usuario_actual: dict = Depends(requerir_rol(1))):
     resultado = eleccion_controller.crear_eleccion(
-        usuario_actual['id_usuario'], datos.titulo, datos.descripcion, datos.fecha_inicio, datos.fecha_fin
+        usuario_actual['id_usuario'], datos.titulo, datos.descripcion,
+        datos.fecha_inicio_inscripcion, datos.fecha_fin_inscripcion,
+        datos.fecha_inicio, datos.fecha_fin
     )
     if not resultado['success']:
         raise HTTPException(status_code=400, detail=resultado['message'])
@@ -41,7 +43,19 @@ def obtener_eleccion(id_eleccion: int, usuario_actual: dict = Depends(obtener_us
 def actualizar_eleccion(id_eleccion: int, datos: EleccionUpdate, usuario_actual: dict = Depends(requerir_rol(1))):
     resultado = eleccion_controller.actualizar_eleccion(
         id_eleccion, usuario_actual['id_usuario'],
-        datos.titulo, datos.descripcion, datos.fecha_inicio, datos.fecha_fin
+        datos.titulo, datos.descripcion,
+        datos.fecha_inicio_inscripcion, datos.fecha_fin_inscripcion,
+        datos.fecha_inicio, datos.fecha_fin
+    )
+    if not resultado['success']:
+        raise HTTPException(status_code=400, detail=resultado['message'])
+    return resultado
+
+
+@router.patch("/{id_eleccion}/gracia", response_model=GraciaResponse)
+def ampliar_postulacion(id_eleccion: int, datos: GraciaRequest, usuario_actual: dict = Depends(requerir_rol(1))):
+    resultado = eleccion_controller.ampliar_postulacion(
+        id_eleccion, usuario_actual['id_usuario'], datos.fecha_fin_inscripcion
     )
     if not resultado['success']:
         raise HTTPException(status_code=400, detail=resultado['message'])

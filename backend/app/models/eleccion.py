@@ -6,53 +6,78 @@ logger = logging.getLogger(__name__)
 class Eleccion:
 
 
+    _SELECT = """
+        SELECT e.id_eleccion, e.titulo, e.descripcion,
+               e.fecha_inicio_inscripcion, e.fecha_fin_inscripcion,
+               e.fecha_inicio, e.fecha_fin,
+               e.id_estado_eleccion, e.id_institucion, ee.nombre AS nombre_estado
+        FROM elecciones e
+        INNER JOIN estados_eleccion ee ON e.id_estado_eleccion = ee.id_estado_eleccion
+    """
+
     @staticmethod
-    def crear(titulo, descripcion, fecha_inicio, fecha_fin, id_institucion, id_estado_eleccion=1):
+    def crear(titulo, descripcion, fecha_inicio, fecha_fin, id_institucion,
+              fecha_inicio_inscripcion=None, fecha_fin_inscripcion=None,
+              id_estado_eleccion=1):
         db = Database()
         query = """
-        INSERT INTO elecciones (titulo, descripcion, fecha_inicio, fecha_fin, id_estado_eleccion, id_institucion)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO elecciones (titulo, descripcion, fecha_inicio_inscripcion,
+                                fecha_fin_inscripcion, fecha_inicio, fecha_fin,
+                                id_estado_eleccion, id_institucion)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id_eleccion
         """
-        resultado = db.ejecutar_query(query, (titulo, descripcion, fecha_inicio, fecha_fin, id_estado_eleccion, id_institucion))
+        resultado = db.ejecutar_query(query, (
+            titulo, descripcion, fecha_inicio_inscripcion, fecha_fin_inscripcion,
+            fecha_inicio, fecha_fin, id_estado_eleccion, id_institucion
+        ))
         return resultado[0]['id_eleccion'] if resultado else None
 
     @staticmethod
     def obtener_por_id(id_eleccion):
         db = Database()
-        query = """
-        SELECT e.id_eleccion, e.titulo, e.descripcion, e.fecha_inicio, e.fecha_fin,
-               e.id_estado_eleccion, e.id_institucion, ee.nombre AS nombre_estado
-        FROM elecciones e
-        INNER JOIN estados_eleccion ee ON e.id_estado_eleccion = ee.id_estado_eleccion
-        WHERE e.id_eleccion = %s
-        """
-        resultado = db.ejecutar_query(query, (id_eleccion,))
+        resultado = db.ejecutar_query(
+            Eleccion._SELECT + " WHERE e.id_eleccion = %s", (id_eleccion,)
+        )
         return resultado[0] if resultado else None
 
     @staticmethod
     def listar_por_institucion(id_institucion):
         db = Database()
-        query = """
-        SELECT e.id_eleccion, e.titulo, e.descripcion, e.fecha_inicio, e.fecha_fin,
-               e.id_estado_eleccion, ee.nombre AS nombre_estado
-        FROM elecciones e
-        INNER JOIN estados_eleccion ee ON e.id_estado_eleccion = ee.id_estado_eleccion
-        WHERE e.id_institucion = %s
-        ORDER BY e.fecha_inicio DESC
-        """
-        return db.ejecutar_query(query, (id_institucion,))
+        return db.ejecutar_query(
+            Eleccion._SELECT + " WHERE e.id_institucion = %s ORDER BY e.fecha_inicio DESC",
+            (id_institucion,)
+        )
 
     @staticmethod
-    def actualizar(id_eleccion, titulo, descripcion, fecha_inicio, fecha_fin):
+    def actualizar(id_eleccion, titulo, descripcion, fecha_inicio, fecha_fin,
+                   fecha_inicio_inscripcion=None, fecha_fin_inscripcion=None):
         db = Database()
         query = """
-        UPDATE elecciones SET titulo = %s, descripcion = %s, fecha_inicio = %s, fecha_fin = %s
+        UPDATE elecciones
+        SET titulo = %s, descripcion = %s,
+            fecha_inicio_inscripcion = %s, fecha_fin_inscripcion = %s,
+            fecha_inicio = %s, fecha_fin = %s
         WHERE id_eleccion = %s
         """
-        resultado = db.ejecutar_query(query, (titulo, descripcion, fecha_inicio, fecha_fin, id_eleccion))
+        resultado = db.ejecutar_query(query, (
+            titulo, descripcion, fecha_inicio_inscripcion, fecha_fin_inscripcion,
+            fecha_inicio, fecha_fin, id_eleccion
+        ))
         return resultado is not None and resultado > 0
 
+    @staticmethod
+    def ampliar_fin_inscripcion(id_eleccion, nueva_fecha):
+        db = Database()
+        query = "UPDATE elecciones SET fecha_fin_inscripcion = %s WHERE id_eleccion = %s"
+        resultado = db.ejecutar_query(query, (nueva_fecha, id_eleccion))
+        return resultado is not None and resultado > 0
+
+    @staticmethod
+    def tiene_votos(id_eleccion):
+        db = Database()
+        query = "SELECT 1 FROM votos WHERE id_eleccion = %s LIMIT 1"
+        return bool(db.ejecutar_query(query, (id_eleccion,)))
     @staticmethod
     def cambiar_estado(id_eleccion, id_estado_eleccion):
         db = Database()
