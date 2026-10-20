@@ -119,3 +119,32 @@ CREATE TABLE registros_votacion(
     FOREIGN KEY (id_eleccion) REFERENCES elecciones(id_eleccion),
     CONSTRAINT uq_registro_usuario_eleccion UNIQUE (id_usuario, id_eleccion)
 );
+
+BEGIN;
+
+-- 1) Nuevo estado de candidatura: el candidato pidió retirarse
+--    y espera que un admin o docente lo resuelva.
+
+
+-- 2) Orden de las fechas de la elección.
+--    Las fechas de inscripción pueden ser NULL (elecciones antiguas),
+--    pero si una viene, la otra también.
+ALTER TABLE elecciones
+    DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
+
+ALTER TABLE elecciones
+    ADD CONSTRAINT chk_elecciones_orden_fechas CHECK (
+        fecha_inicio < fecha_fin
+        AND (fecha_inicio_inscripcion IS NULL) = (fecha_fin_inscripcion IS NULL)
+        AND (fecha_inicio_inscripcion IS NULL
+             OR fecha_inicio_inscripcion < fecha_fin_inscripcion)
+        AND (fecha_fin_inscripcion IS NULL
+             OR fecha_fin_inscripcion <= fecha_inicio)
+    );
+
+COMMIT;
+
+BEGIN;
+ALTER TABLE elecciones DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
+DELETE FROM estados_candidatura WHERE id_estado_candidatura = 5;
+COMMIT;

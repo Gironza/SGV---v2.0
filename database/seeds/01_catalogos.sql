@@ -23,6 +23,7 @@ INSERT INTO estados_candidatura (id_estado_candidatura, nombre) VALUES
     (1, 'Pendiente'),
     (2, 'Aprobada'),
     (3, 'Rechazada'),
-    (4, 'Retirada')
+    (4, 'Retirada'),
+    (5, 'Retiro Solicitado')
 ON CONFLICT (id_estado_candidatura) DO NOTHING;
 

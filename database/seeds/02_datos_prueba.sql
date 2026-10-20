@@ -32,7 +32,8 @@ INSERT INTO elecciones (titulo, descripcion, fecha_inicio, fecha_fin, id_estado_
 ('Cabildante', 'Elección del Cabildante Estudiantil ante la localidad', '2026-03-01 08:00:00', '2026-03-01 16:00:00', 1, 1),
 ('Personero', 'Elección del Personero Estudiantil del colegio', '2026-03-01 08:00:00', '2026-03-01 16:00:00', 2, 1);
 
-
+INSERT INTO elecciones (titulo, descripcion, fecha_inicio, fecha_fin, id_estado_eleccion, id_institucion, fecha_inicio_inscripcion, fecha_fin_inscripcion, fecha_publicacion_resultados) 
+VALUES ('Mejor estudiante', 'Premio al mejor estudiante', '2026-10-20 08:00:00', '2026-10-20 18:00:00', 3, 1, '2026-10-19 10:45:00', '2026-10-19 24:00:00', '2026-10-21 08:00:00' )
 
 
 
