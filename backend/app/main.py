@@ -3,7 +3,9 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
+from app.utils.imagenes import DIRECTORIO_UPLOADS
 from app.config.database import BaseDatosNoDisponible
 from app.routes.auth_routes import router as auth_router
 from app.routes.voto_routes import router as voto_router
@@ -91,6 +93,8 @@ app.include_router(resultado_router)
 app.include_router(institucion_router)
 app.include_router(info_router)
 
+DIRECTORIO_UPLOADS.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=DIRECTORIO_UPLOADS), name="uploads")
 
 @app.get("/")
 def api():

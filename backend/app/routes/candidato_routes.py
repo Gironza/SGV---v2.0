@@ -1,12 +1,14 @@
 from typing import List
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from app.schemas.candidato_schema import (
     CandidatoCreate, PropuestaUpdate, ObservacionesRequest,
     RevisarCandidaturaRequest, ResolverRetiroRequest,
-    CandidatoOut, CandidaturaDetalleOut, CandidatoCreadoResponse, MensajeResponse
+    CandidatoOut, CandidaturaDetalleOut, CandidatoCreadoResponse, 
+    MensajeResponse, FotoCandidatoResponse
 )
 from app.controllers.candidato_controller import CandidatoController
 from app.middleware.auth_middleware import obtener_usuario_actual, requerir_rol
+from app.utils.imagenes import MAX_BYTES_FOTO
 
 router = APIRouter(prefix="/candidatos", tags=["Candidatos"])
 candidato_controller = CandidatoController()
@@ -22,12 +24,13 @@ def _resolver(resultado):
         codigo = 403
     elif resultado.get('conflicto'):
         codigo = 409
+    elif resultado.get('demasiado_grande'):
+        codigo = 413
     elif resultado.get('error_sistema'):
         codigo = 500
     else:
         codigo = 400
     raise HTTPException(status_code=codigo, detail=resultado['message'])
-
 
 # El estudiante se postula con un clic (queda Pendiente), solo en etapa de postulación
 @router.post("/", response_model=CandidatoCreadoResponse)
@@ -76,6 +79,26 @@ def editar_propuesta(
         id_candidato, usuario_actual['id_usuario'], datos.propuesta
     ))
 
+# El candidato sube o reemplaza su foto (aprobada y etapa de postulación)
+@router.put("/{id_candidato}/foto", response_model=FotoCandidatoResponse)
+def subir_foto(
+    id_candidato: int,
+    archivo: UploadFile = File(...),
+    usuario_actual: dict = Depends(requerir_rol(3))
+):
+    # Se lee un byte de más para detectar si se pasó del límite sin cargar todo en memoria
+    contenido = archivo.file.read(MAX_BYTES_FOTO + 1)
+    return _resolver(candidato_controller.subir_foto(
+        id_candidato, usuario_actual['id_usuario'], contenido
+    ))
+
+
+# El candidato quita su foto
+@router.delete("/{id_candidato}/foto", response_model=FotoCandidatoResponse)
+def quitar_foto(id_candidato: int, usuario_actual: dict = Depends(requerir_rol(3))):
+    return _resolver(candidato_controller.quitar_foto(
+        id_candidato, usuario_actual['id_usuario']
+    ))
 
 # Aprobar o rechazar una candidatura (admin y docente), hasta antes del inicio
 @router.patch("/{id_candidato}/revisar", response_model=MensajeResponse)

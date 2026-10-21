@@ -9,6 +9,10 @@ from app.utils.acceso import obtener_eleccion_de_institucion
 from app.utils.etapas import (
     calcular_etapa, ETAPA_PUBLICADA, ETAPA_POSTULACION, ETAPAS_SIN_INICIAR
 )
+from app.utils.imagenes import (
+    FotoInvalida, MAX_BYTES_FOTO, PREFIJO_URL_FOTOS,
+    procesar_foto, guardar_foto, eliminar_archivo_foto
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +81,30 @@ class CandidatoController:
             logger.error(f"Error al inscribir candidato: {e}")
             return _fallo(MSG_SISTEMA, 'error_sistema')
 
+    @staticmethod
+    def _candidatura_editable_por_dueno(id_candidato, id_usuario, que):
+        """
+        Reglas para editar contenido de la candidatura (propuesta o foto):
+        dueño, candidatura aprobada y etapa de postulación.
+        Devuelve (candidatura, None) si todo está bien, o (None, fallo) si no.
+        """
+        candidato = Candidato.obtener_por_id(id_candidato)
+        if not candidato:
+            return None, _fallo(MSG_CANDIDATURA_NO_ENCONTRADA, 'no_encontrado')
+        if candidato['id_usuario'] != id_usuario:
+            return None, _fallo('No puedes editar la candidatura de otro estudiante', 'prohibido')
+
+        if candidato['id_estado_candidatura'] != ESTADO_APROBADA:
+            return None, _fallo(f'Solo puedes editar tu {que} cuando tu candidatura esté aprobada')
+
+        eleccion = Eleccion.obtener_por_id(candidato['id_eleccion'])
+        if not eleccion:
+            return None, _fallo(MSG_ELECCION_NO_ENCONTRADA, 'no_encontrado')
+        if calcular_etapa(eleccion) != ETAPA_POSTULACION:
+            return None, _fallo(f'La {que} solo se puede editar mientras está abierto el periodo de postulación')
+
+        return candidato, None
+
     def editar_propuesta(self, id_candidato, id_usuario, propuesta):
         """El candidato dueño edita su propuesta: aprobada y en etapa de postulación."""
         try:
@@ -84,20 +112,9 @@ class CandidatoController:
             if not propuesta:
                 return _fallo('La propuesta no puede estar vacía')
 
-            candidato = Candidato.obtener_por_id(id_candidato)
-            if not candidato:
-                return _fallo(MSG_CANDIDATURA_NO_ENCONTRADA, 'no_encontrado')
-            if candidato['id_usuario'] != id_usuario:
-                return _fallo('No puedes editar la candidatura de otro estudiante', 'prohibido')
-
-            if candidato['id_estado_candidatura'] != ESTADO_APROBADA:
-                return _fallo('Solo puedes editar tu propuesta cuando tu candidatura esté aprobada')
-
-            eleccion = Eleccion.obtener_por_id(candidato['id_eleccion'])
-            if not eleccion:
-                return _fallo(MSG_ELECCION_NO_ENCONTRADA, 'no_encontrado')
-            if calcular_etapa(eleccion) != ETAPA_POSTULACION:
-                return _fallo('La propuesta solo se puede editar mientras está abierto el periodo de postulación')
+            _, fallo = self._candidatura_editable_por_dueno(id_candidato, id_usuario, 'propuesta')
+            if fallo:
+                return fallo
 
             if not Candidato.actualizar_propuesta(id_candidato, propuesta):
                 return _fallo('Error al guardar la propuesta', 'error_sistema')
@@ -106,6 +123,69 @@ class CandidatoController:
             raise
         except Exception as e:
             logger.error(f"Error al editar propuesta: {e}")
+            return _fallo(MSG_SISTEMA, 'error_sistema')
+
+
+    def subir_foto(self, id_candidato, id_usuario, contenido):
+        """
+        Sube o reemplaza la foto. Orden pensado para no dejar basura:
+        1) reglas, 2) tamaño y validación de la imagen, 3) guardar archivo,
+        4) actualizar la BD, 5) recién entonces borrar el archivo anterior.
+        Si la BD falla, se borra el archivo recién guardado.
+        """
+        try:
+            candidato, fallo = self._candidatura_editable_por_dueno(id_candidato, id_usuario, 'foto')
+            if fallo:
+                return fallo
+
+            if not contenido:
+                return _fallo('El archivo está vacío')
+            if len(contenido) > MAX_BYTES_FOTO:
+                return _fallo('La foto pesa más de 2 MB', 'demasiado_grande')
+
+            try:
+                jpeg = procesar_foto(contenido)
+            except FotoInvalida:
+                return _fallo('El archivo no es una imagen válida. Usa JPG, PNG o WEBP')
+
+            url_nueva = f"{PREFIJO_URL_FOTOS}/{guardar_foto(jpeg)}"
+
+            try:
+                actualizado = Candidato.actualizar_foto(id_candidato, url_nueva)
+            except Exception:
+                eliminar_archivo_foto(url_nueva)  # no dejar huérfano
+                raise
+            if not actualizado:
+                eliminar_archivo_foto(url_nueva)
+                return _fallo('Error al guardar la foto', 'error_sistema')
+
+            eliminar_archivo_foto(candidato['foto'])  # la anterior, ya con la BD actualizada
+            return {'success': True, 'message': 'Foto actualizada exitosamente', 'foto': url_nueva}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al subir foto: {e}")
+            return _fallo(MSG_SISTEMA, 'error_sistema')
+
+    def quitar_foto(self, id_candidato, id_usuario):
+        """Quita la foto: primero la BD, después el archivo."""
+        try:
+            candidato, fallo = self._candidatura_editable_por_dueno(id_candidato, id_usuario, 'foto')
+            if fallo:
+                return fallo
+
+            if not candidato['foto']:
+                return _fallo('Tu candidatura no tiene foto')
+
+            if not Candidato.actualizar_foto(id_candidato, None):
+                return _fallo('Error al quitar la foto', 'error_sistema')
+
+            eliminar_archivo_foto(candidato['foto'])
+            return {'success': True, 'message': 'Foto eliminada exitosamente', 'foto': None}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al quitar foto: {e}")
             return _fallo(MSG_SISTEMA, 'error_sistema')
 
     def solicitar_retiro(self, id_candidato, id_usuario):

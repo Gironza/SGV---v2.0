@@ -150,3 +150,12 @@ class Candidato:
         query = "UPDATE candidatos SET propuesta = %s WHERE id_candidato = %s"
         resultado = db.ejecutar_query(query, (propuesta, id_candidato))
         return resultado is not None and resultado > 0
+
+    @staticmethod
+    def actualizar_foto(id_candidato, foto):
+        # foto=None la quita
+        db = Database()
+        query = "UPDATE candidatos SET foto = %s WHERE id_candidato = %s"
+        resultado = db.ejecutar_query(query, (foto, id_candidato))
+        return resultado is not None and resultado > 0
+    

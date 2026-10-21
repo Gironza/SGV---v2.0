@@ -52,3 +52,8 @@ class CandidatoCreadoResponse(BaseModel):
 class MensajeResponse(BaseModel):
     success: bool
     message: str
+
+class FotoCandidatoResponse(BaseModel):
+    success: bool
+    message: str
+    foto: Optional[str] = None  # URL relativa; null si se quitó la foto
