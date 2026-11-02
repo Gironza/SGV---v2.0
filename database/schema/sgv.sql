@@ -129,6 +129,16 @@ BEGIN;
 -- 2) Orden de las fechas de la elección.
 --    Las fechas de inscripción pueden ser NULL (elecciones antiguas),
 --    pero si una viene, la otra también.
+
+UPDATE candidatos SET foto = NULL WHERE foto IS NOT NULL AND foto NOT LIKE '/uploads/candidatos/%';
+
+CREATE TABLE elecciones_cursos (
+    id_eleccion INT NOT NULL REFERENCES elecciones(id_eleccion) ON DELETE CASCADE,
+    curso VARCHAR(20) NOT NULL,
+    tipo VARCHAR(12) NOT NULL CHECK (tipo IN ('postulacion', 'votacion')),
+    PRIMARY KEY (id_eleccion, curso, tipo)
+);
+
 ALTER TABLE elecciones
     DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
 
@@ -147,4 +157,18 @@ COMMIT;
 BEGIN;
 ALTER TABLE elecciones DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
 DELETE FROM estados_candidatura WHERE id_estado_candidatura = 5;
+COMMIT;
+
+
+BEGIN;
+
+-- id_voto: de serial a UUID aleatorio (v4, no ordenable) para que no delate el orden de voto
+ALTER TABLE votos ALTER COLUMN id_voto DROP DEFAULT;
+ALTER TABLE votos ALTER COLUMN id_voto TYPE uuid USING gen_random_uuid();
+ALTER TABLE votos ALTER COLUMN id_voto SET DEFAULT gen_random_uuid();
+DROP SEQUENCE IF EXISTS votos_id_voto_seq;
+
+-- el voto ya no lleva fecha: no se puede cruzar con registros_votacion
+ALTER TABLE votos DROP COLUMN fecha_voto;
+
 COMMIT;
