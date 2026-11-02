@@ -84,6 +84,18 @@ class Usuario:
             usuario.rol_nombre = data['rol_nombre']
             return usuario
         return None
+    @staticmethod
+    def listar_cursos(id_institucion):
+        """Cursos reales de los estudiantes de la institución (para validar y armar listas)."""
+        db = Database()
+        query = """
+        SELECT DISTINCT curso FROM usuarios
+        WHERE id_institucion = %s AND id_rol = 3
+          AND curso IS NOT NULL AND curso <> ''
+        ORDER BY curso
+        """
+        resultado = db.ejecutar_query(query, (id_institucion,)) or []
+        return [fila['curso'] for fila in resultado]
  
     @staticmethod
     def extraer_usuarios(id_institucion=None):
