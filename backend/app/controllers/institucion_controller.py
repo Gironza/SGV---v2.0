@@ -1,5 +1,6 @@
 import logging
 import secrets
+from app.config.database import BaseDatosNoDisponible
 from app.models.institucion import Institucion
 from app.models.usuario import Usuario
 
@@ -29,6 +30,8 @@ class InstitucionController:
                 return {'success': False, 'message': 'Institución no encontrada'}
 
             return {'success': True, 'codigos': codigos}
+        except BaseDatosNoDisponible:
+            raise
         except Exception as e:
             logger.error(f"Error al obtener códigos de invitación: {e}")
             return {'success': False, 'message': 'Error en el sistema, intenta más tarde'}
@@ -54,6 +57,8 @@ class InstitucionController:
                     }
 
             return {'success': False, 'message': 'No se pudo generar un código único, intenta de nuevo'}
+        except BaseDatosNoDisponible:
+            raise
         except Exception as e:
             logger.error(f"Error al renovar código de invitación: {e}")
             return {'success': False, 'message': 'Error en el sistema, intenta más tarde'}
@@ -74,6 +79,8 @@ class InstitucionController:
                 'success': True,
                 'message': f'Código de {tipo} desactivado. Nadie podrá registrarse con ese rol hasta que lo renueves'
             }
+        except BaseDatosNoDisponible:
+            raise
         except Exception as e:
             logger.error(f"Error al desactivar código de invitación: {e}")
             return {'success': False, 'message': 'Error en el sistema, intenta más tarde'}
