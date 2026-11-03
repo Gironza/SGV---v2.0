@@ -1,5 +1,5 @@
 // Las pantallas se deciden por `etapa`, no por `nombre_estado`.
-// TODO(openapi): el contrato no lista los valores de `etapa`.
+// Confirmado: "postulacion". Los demás valores son suposiciones (TODO).
 // Confirmar con un GET /elecciones en Swagger y ajustar ETAPAS.
 
 export type EtapaTono = "success" | "warning" | "neutral" | "info" | "danger";
@@ -31,4 +31,13 @@ export function normalizarEtapa(etapa: string): string {
  *  texto crudo en neutro (nunca rompe la pantalla). */
 export function infoEtapa(etapa: string): EtapaInfo {
   return ETAPAS[normalizarEtapa(etapa)] ?? { etiqueta: etapa, tono: "neutral" };
+}
+
+/** ¿La elección ya terminó? Se mira la etapa y, por seguridad, el
+ *  nombre_estado heredado (hasta confirmar el valor exacto de etapa). */
+export function esFinalizada(e: { etapa: string; nombre_estado?: string }): boolean {
+  return (
+    normalizarEtapa(e.etapa) === "finalizada" ||
+    normalizarEtapa(e.nombre_estado ?? "") === "finalizada"
+  );
 }

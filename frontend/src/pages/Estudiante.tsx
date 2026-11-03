@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "../styles/styles.css";
@@ -17,6 +18,7 @@ import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import AccentButton from "../components/ui/AccentButton";
 import { estadoEleccionTone } from "../utils/estado";
+import { esFinalizada } from "../utils/etapa";
 
 // F17-F20: emitir voto único con confirmación (RN14/RN21).
 // F13/F16: inscribir/retirar candidatura — aquí mismo, porque un
@@ -91,7 +93,10 @@ function Estudiante() {
     }
   }
 
-  const activas = elecciones.filter((e) => e.nombre_estado === "Activa").length;
+  // Las finalizadas no se listan aquí: pasan al historial.
+  const visibles = elecciones.filter((e) => !esFinalizada(e));
+  const enHistorial = elecciones.length - visibles.length;
+  const activas = visibles.filter((e) => e.nombre_estado === "Activa").length;
 
   return (
     <DashboardLayout
@@ -102,18 +107,18 @@ function Estudiante() {
     >
       <div className="stat-grid">
         <StatCard icon="fa-solid fa-box-ballot" label="Votaciones activas" value={activas} />
-        <StatCard icon="fa-solid fa-list" label="Total de votaciones" value={elecciones.length} />
+        <StatCard icon="fa-solid fa-list" label="Votaciones vigentes" value={visibles.length} />
       </div>
 
       {!seleccion && (
         <Panel title="Votaciones de tu institución">
           {cargando ? (
             <p style={{ color: "var(--sgv-muted)" }}>Cargando...</p>
-          ) : elecciones.length === 0 ? (
-            <p style={{ color: "var(--sgv-muted)" }}>Todavía no hay votaciones creadas.</p>
+          ) : visibles.length === 0 ? (
+            <p style={{ color: "var(--sgv-muted)" }}>No hay votaciones vigentes por ahora.</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-              {elecciones.map((e) => (
+              {visibles.map((e) => (
                 <div key={e.id_eleccion} className="panel-box" style={{ padding: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
                     <h4 style={{ fontSize: 15, fontWeight: 700 }}>{e.titulo}</h4>
@@ -139,6 +144,12 @@ function Estudiante() {
                 </div>
               ))}
             </div>
+          )}
+          {enHistorial > 0 && (
+            <p style={{ marginTop: 16, fontSize: 13, color: "var(--sgv-muted)" }}>
+              {enHistorial} votación(es) finalizada(s) están en tu{" "}
+              <Link to="/estudiante/historial">historial</Link>.
+            </p>
           )}
         </Panel>
       )}

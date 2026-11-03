@@ -148,3 +148,50 @@
   .account-caret { display: none; }
   .account-trigger { padding: 4px; }
 }
+
+/* ============================================================
+   Layout fijo: sidebar y header no se desplazan; solo scrollea
+   el contenido de la página (.app-content).
+   ============================================================ */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+/* Si hay muchos ítems, solo la navegación scrollea; el pie
+   (Mi cuenta / Cerrar sesión) queda siempre visible. */
+.app-sidebar nav { min-height: 0; overflow-y: auto; }
+.app-sidebar-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-main { height: 100%; min-height: 0; overflow: hidden; }
+.app-topbar { flex-shrink: 0; }
+.app-content { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* Enlace "Mi cuenta" del sidebar */
+.account-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--sgv-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s ease;
+}
+.account-link i { width: 18px; text-align: center; color: var(--sgv-muted); }
+.account-link:hover,
+.account-link.is-active { background: var(--sgv-bg); color: var(--sgv-ink); }

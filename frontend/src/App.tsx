@@ -11,6 +11,7 @@ import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
 import Docente from "./pages/Docente";
 import Estudiante from "./pages/Estudiante";
+import EstudianteHistorial from "./pages/EstudianteHistorial";
 
 // Roles: Administrador(1), Docente(2), Estudiante(3).
 // Estructura: una sola ruta de layout (AppLayout) protegida para los 3
@@ -50,7 +51,7 @@ function App() {
             <Route path="/estudiante" element={<RutaProtegida rolesPermitidos={[3]} />}>
               <Route index element={<Estudiante />} />
               <Route path="elecciones" element={<PaginaEnConstruccion titulo="Elecciones" subtitulo="Postúlate o vota" etapa="3A" />} />
-              <Route path="historial" element={<PaginaEnConstruccion titulo="Mi historial" subtitulo="Certificados y resultados" etapa="3D" />} />
+              <Route path="historial" element={<EstudianteHistorial />} />
             </Route>
           </Route>
         </Routes>

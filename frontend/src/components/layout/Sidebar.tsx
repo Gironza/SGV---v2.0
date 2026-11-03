@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import type { NavItem } from "../../config/navigation";
+import { RUTA_CUENTA, type NavItem } from "../../config/navigation";
 import { ROL_LABEL, type Rol } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import Logo from "../ui/Logo";
@@ -56,6 +56,14 @@ export function Sidebar({ items, accent, rol, abierto = false, onCerrar }: Sideb
         </ul>
       </nav>
       <div className="app-sidebar-footer">
+        <Link
+          to={RUTA_CUENTA}
+          className={`account-link${pathname === RUTA_CUENTA ? " is-active" : ""}`}
+          aria-current={pathname === RUTA_CUENTA ? "page" : undefined}
+        >
+          <i className="fa-solid fa-user-gear"></i>
+          Mi cuenta
+        </Link>
         <button type="button" onClick={handleLogout} className="logout-btn border-0 bg-transparent w-100 text-start">
           <i className="fa-solid fa-right-from-bracket"></i>
           Cerrar sesión
