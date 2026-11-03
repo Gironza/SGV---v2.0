@@ -19,6 +19,8 @@ def resolver(resultado):
         codigo = 403
     elif resultado.get('conflicto'):
         codigo = 409
+    elif resultado.get('demasiado_grande'):
+        codigo = 413
     elif resultado.get('error_sistema'):
         codigo = 500
     else:
