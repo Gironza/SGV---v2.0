@@ -158,4 +158,20 @@ class Candidato:
         query = "UPDATE candidatos SET foto = %s WHERE id_candidato = %s"
         resultado = db.ejecutar_query(query, (foto, id_candidato))
         return resultado is not None and resultado > 0
-    
+
+    @staticmethod
+    def vigentes_de_usuario(id_usuario):
+        """Candidaturas pendientes, aprobadas o con retiro solicitado, con los datos de su elección."""
+        db = Database()
+        query = """
+        SELECT e.id_eleccion, e.titulo, e.fecha_inicio_inscripcion, e.fecha_fin_inscripcion,
+               e.fecha_inicio, e.fecha_fin, e.id_estado_eleccion
+        FROM candidatos c
+        INNER JOIN elecciones e ON c.id_eleccion = e.id_eleccion
+        WHERE c.id_usuario = %s AND c.id_estado_candidatura = ANY(%s)
+        ORDER BY e.fecha_inicio
+        """
+        return db.ejecutar_query(query, (
+            id_usuario,
+            [ESTADO_PENDIENTE, ESTADO_APROBADA, ESTADO_RETIRO_SOLICITADO]
+        ))

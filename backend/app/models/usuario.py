@@ -1,5 +1,17 @@
+import logging
+from psycopg2 import errors
+from psycopg2.extras import RealDictCursor
 from app.config.database import Database
- 
+
+logger = logging.getLogger(__name__)
+
+# Resultados de Usuario.cambiar_activo
+RESULTADO_OK = 'ok'
+RESULTADO_NO_ENCONTRADO = 'no_encontrado'
+RESULTADO_ULTIMO_ADMIN = 'ultimo_admin'
+RESULTADO_CON_HISTORIAL = 'con_historial'
+
+from app.config.database import Database
  
 class Usuario:
  
@@ -262,3 +274,159 @@ class Usuario:
         resultado = db.ejecutar_query(query, (contrasena_hasheada, id_usuario))
         return bool(resultado)
     
+    @staticmethod
+    def documento_en_uso_por_otro(documento, id_usuario):
+        """True si otro usuario (distinto al indicado) ya tiene ese documento."""
+        db = Database()
+        query = "SELECT COUNT(*) as count FROM usuarios WHERE documento = %s AND id_usuario <> %s"
+        resultado = db.ejecutar_query(query, (documento, id_usuario))
+        return resultado[0]['count'] > 0 if resultado else False
+
+    @staticmethod
+    def tipo_documento_existe(id_tipo_doc):
+        db = Database()
+        query = "SELECT 1 FROM tipos_documento WHERE id_tipo_doc = %s"
+        return bool(db.ejecutar_query(query, (id_tipo_doc,)))
+
+    @staticmethod
+    def actualizar_datos(id_usuario, documento, id_tipo_doc, nombre, apellido, correo, curso):
+        db = Database()
+        query = """
+        UPDATE usuarios
+        SET documento = %s, id_tipo_doc = %s, nombre = %s, apellido = %s,
+            correo = %s, curso = %s
+        WHERE id_usuario = %s
+        RETURNING id_usuario
+        """
+        resultado = db.ejecutar_query(
+            query, (documento, id_tipo_doc, nombre, apellido, correo, curso, id_usuario)
+        )
+        return bool(resultado)
+
+    @staticmethod
+    def actualizar_curso(id_usuario, curso):
+        db = Database()
+        query = "UPDATE usuarios SET curso = %s WHERE id_usuario = %s RETURNING id_usuario"
+        return bool(db.ejecutar_query(query, (curso, id_usuario)))
+
+    @staticmethod
+    def cambiar_activo(id_usuario, activo):
+        """
+        Activa o desactiva una cuenta. Devuelve RESULTADO_OK, RESULTADO_NO_ENCONTRADO,
+        RESULTADO_ULTIMO_ADMIN, o None si falla.
+        Al desactivar a un admin, primero se bloquean las filas de los admins activos
+        de su institución: así, si dos admins intentan desactivarse a la vez, el segundo
+        espera, ve el resultado del primero y no deja la institución sin ningún admin.
+        """
+        db = Database()
+        conexion = db.obtener_conexion()
+        if not conexion:
+            return None
+
+        cursor = None
+        try:
+            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+
+            cursor.execute(
+                "SELECT id_institucion, id_rol FROM usuarios WHERE id_usuario = %s",
+                (id_usuario,)
+            )
+            objetivo = cursor.fetchone()
+            if not objetivo:
+                conexion.rollback()
+                return RESULTADO_NO_ENCONTRADO
+
+            if not activo and objetivo['id_rol'] == 1:
+                cursor.execute("""
+                    SELECT id_usuario FROM usuarios
+                    WHERE id_institucion = %s AND id_rol = 1 AND activo
+                    ORDER BY id_usuario
+                    FOR UPDATE
+                """, (objetivo['id_institucion'],))
+                otros = [f for f in cursor.fetchall() if f['id_usuario'] != id_usuario]
+                if not otros:
+                    conexion.rollback()
+                    return RESULTADO_ULTIMO_ADMIN
+
+            cursor.execute(
+                "UPDATE usuarios SET activo = %s WHERE id_usuario = %s", (activo, id_usuario)
+            )
+            conexion.commit()
+            return RESULTADO_OK
+        except Exception as e:
+            conexion.rollback()
+            logger.error(f"Error al cambiar estado de la cuenta: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            conexion.close()
+    
+    @staticmethod
+    def contar_historial(id_usuario):
+        """Candidaturas (en cualquier estado) y participaciones en votaciones del usuario."""
+        db = Database()
+        query = """
+        SELECT (SELECT COUNT(*) FROM candidatos WHERE id_usuario = %s) AS candidaturas,
+               (SELECT COUNT(*) FROM registros_votacion WHERE id_usuario = %s) AS participaciones
+        """
+        resultado = db.ejecutar_query(query, (id_usuario, id_usuario))
+        return resultado[0] if resultado else None
+
+    @staticmethod
+    def eliminar(id_usuario):
+        """
+        Borrado real. Devuelve RESULTADO_OK, RESULTADO_NO_ENCONTRADO, RESULTADO_ULTIMO_ADMIN,
+        RESULTADO_CON_HISTORIAL (la BD rechazó el borrado por candidaturas o votaciones
+        que aparecieron después de revisar), o None si falla.
+        Igual que al desactivar, borrar a un admin activo bloquea primero las filas de los
+        admins activos de su institución para no dejarla sin ninguno.
+        """
+        db = Database()
+        conexion = db.obtener_conexion()
+        if not conexion:
+            return None
+
+        cursor = None
+        try:
+            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+
+            cursor.execute(
+                "SELECT id_institucion, id_rol, activo FROM usuarios WHERE id_usuario = %s",
+                (id_usuario,)
+            )
+            objetivo = cursor.fetchone()
+            if not objetivo:
+                conexion.rollback()
+                return RESULTADO_NO_ENCONTRADO
+
+            if objetivo['id_rol'] == 1 and objetivo['activo']:
+                cursor.execute("""
+                    SELECT id_usuario FROM usuarios
+                    WHERE id_institucion = %s AND id_rol = 1 AND activo
+                    ORDER BY id_usuario
+                    FOR UPDATE
+                """, (objetivo['id_institucion'],))
+                otros = [f for f in cursor.fetchall() if f['id_usuario'] != id_usuario]
+                if not otros:
+                    conexion.rollback()
+                    return RESULTADO_ULTIMO_ADMIN
+
+            cursor.execute("DELETE FROM usuarios WHERE id_usuario = %s", (id_usuario,))
+            if cursor.rowcount == 0:
+                conexion.rollback()
+                return RESULTADO_NO_ENCONTRADO
+
+            conexion.commit()
+            return RESULTADO_OK
+        except errors.ForeignKeyViolation:
+            conexion.rollback()
+            return RESULTADO_CON_HISTORIAL
+        except Exception as e:
+            conexion.rollback()
+            logger.error(f"Error al eliminar usuario: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            conexion.close()
