@@ -101,3 +101,27 @@ class Voto:
         ORDER BY r.fecha_voto DESC, r.id_registro DESC
         """
         return db.ejecutar_query(query, (id_usuario,))
+
+    @staticmethod
+    def datos_certificado(id_usuario, id_eleccion):
+        """
+        Datos para el certificado, a partir del registro de votación del usuario
+        (nunca de la tabla votos, que es secreta). None si no votó en esa elección.
+        """
+        db = Database()
+        query = """
+        SELECT r.id_registro, r.fecha_voto, e.titulo,
+               u.nombre, u.apellido, u.documento, td.nombre AS tipo_documento,
+               i.nombre AS institucion
+        FROM registros_votacion r
+        INNER JOIN elecciones e ON r.id_eleccion = e.id_eleccion
+        INNER JOIN instituciones i ON e.id_institucion = i.id_institucion
+        INNER JOIN usuarios u ON r.id_usuario = u.id_usuario
+        INNER JOIN tipos_documento td ON u.id_tipo_doc = td.id_tipo_doc
+        WHERE r.id_usuario = %s AND r.id_eleccion = %s
+        """
+        resultado = db.ejecutar_query(query, (id_usuario, id_eleccion))
+        return resultado[0] if resultado else None
+
+
+    

@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from app.schemas.voto_schema import (
     VotoCreate, EleccionDisponibleOut, EstadoVotoResponse, VotoConfirmadoResponse, HistorialVotoOut
 )
@@ -24,6 +25,17 @@ def ver_disponibles(usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))
 def ver_historial(usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))):
     return resolver(voto_controller.historial(usuario_actual['id_usuario']))['historial']
 
+# RF-028: certificado electoral en PDF, disponible desde que el estudiante votó
+@router.get("/{id_eleccion}/certificado")
+def descargar_certificado(id_eleccion: int, usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))):
+    resultado = resolver(voto_controller.generar_certificado(
+        usuario_actual['id_usuario'], id_eleccion
+    ))
+    return Response(
+        content=resultado['contenido'],
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="certificado_eleccion_{id_eleccion}.pdf"'}
+    )
 
 @router.get("/{id_eleccion}/estado", response_model=EstadoVotoResponse)
 def ver_estado_voto(id_eleccion: int, usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))):

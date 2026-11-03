@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from app.config.database import BaseDatosNoDisponible
 from app.models.resultado import Resultado
+from app.utils import exportes
 from app.utils.acceso import obtener_eleccion_de_institucion
 from app.utils.etapas import (
     calcular_etapa, ETAPA_VOTACION, ETAPA_PAUSADA, ETAPA_FINALIZADA
@@ -76,6 +77,46 @@ class ResultadoController:
             return primeros[0], []
         return None, primeros
 
+    def _armar_resultados(self, eleccion, etapa):
+        """
+        Todas las cifras de una elección, sin revisar permisos (eso lo hace quien llama).
+        Devuelve None si alguna consulta falla.
+        """
+        id_eleccion = eleccion['id_eleccion']
+        conteos = Resultado.conteos(id_eleccion)
+        cursos = Resultado.participacion_por_curso(id_eleccion, eleccion['id_institucion'])
+        if conteos is None or cursos is None:
+            return None
+
+        total = conteos['total_votos']
+        candidatos = [
+            {**c, 'porcentaje': _porcentaje(c['total_votos'], total)}
+            for c in conteos['candidatos']
+        ]
+        ganador, empatados = (
+            self._ganador(candidatos) if etapa == ETAPA_FINALIZADA else (None, [])
+        )
+
+        return {
+            'titulo_eleccion': eleccion['titulo'],
+            'etapa': etapa,
+            'candidatos': candidatos,
+            'votos_blancos': conteos['votos_blancos'],
+            'total_votos': total,
+            'participacion': self._resumen(cursos),
+            'por_curso': [
+                {
+                    'curso': f['curso'],
+                    'habilitados': f['habilitados'],
+                    'votaron': f['votaron'],
+                    'porcentaje': _porcentaje(f['votaron'], f['habilitados']),
+                }
+                for f in cursos
+            ],
+            'ganador': ganador,
+            'empatados': empatados,
+        }
+
     def obtener_resultados(self, id_eleccion, id_usuario, id_rol):
         """RF-021, RF-029 y RF-038."""
         try:
@@ -89,31 +130,11 @@ class ResultadoController:
             if motivo:
                 return fallo(motivo, 'prohibido')
 
-            conteos = Resultado.conteos(id_eleccion)
-            cursos = Resultado.participacion_por_curso(id_eleccion, eleccion['id_institucion'])
-            if conteos is None or cursos is None:
+            datos = self._armar_resultados(eleccion, etapa)
+            if datos is None:
                 return fallo(MSG_SISTEMA, 'error_sistema')
 
-            total = conteos['total_votos']
-            candidatos = [
-                {**c, 'porcentaje': _porcentaje(c['total_votos'], total)}
-                for c in conteos['candidatos']
-            ]
-            ganador, empatados = (
-                self._ganador(candidatos) if etapa == ETAPA_FINALIZADA else (None, [])
-            )
-
-            return {
-                'success': True,
-                'titulo_eleccion': eleccion['titulo'],
-                'etapa': etapa,
-                'candidatos': candidatos,
-                'votos_blancos': conteos['votos_blancos'],
-                'total_votos': total,
-                'participacion': self._resumen(cursos),
-                'ganador': ganador,
-                'empatados': empatados,
-            }
+            return {'success': True, **datos}
         except BaseDatosNoDisponible:
             raise
         except Exception as e:
@@ -133,27 +154,18 @@ class ResultadoController:
             if motivo:
                 return fallo(motivo, 'prohibido')
 
-            conteos = Resultado.conteos(id_eleccion)
-            cursos = Resultado.participacion_por_curso(id_eleccion, eleccion['id_institucion'])
-            if conteos is None or cursos is None:
+            datos = self._armar_resultados(eleccion, etapa)
+            if datos is None:
                 return fallo(MSG_SISTEMA, 'error_sistema')
 
-            total = conteos['total_votos']
-            blancos = conteos['votos_blancos']
+            total = datos['total_votos']
+            blancos = datos['votos_blancos']
             return {
                 'success': True,
-                'titulo_eleccion': eleccion['titulo'],
+                'titulo_eleccion': datos['titulo_eleccion'],
                 'etapa': etapa,
-                'participacion': self._resumen(cursos),
-                'por_curso': [
-                    {
-                        'curso': f['curso'],
-                        'habilitados': f['habilitados'],
-                        'votaron': f['votaron'],
-                        'porcentaje': _porcentaje(f['votaron'], f['habilitados']),
-                    }
-                    for f in cursos
-                ],
+                'participacion': datos['participacion'],
+                'por_curso': datos['por_curso'],
                 'total_votos': total,
                 'votos_validos': total - blancos,
                 'votos_blancos': blancos,
@@ -163,4 +175,41 @@ class ResultadoController:
             raise
         except Exception as e:
             logger.error(f"Error al obtener estadísticas: {e}")
+            return fallo(MSG_SISTEMA, 'error_sistema')
+
+    def exportar_resultados(self, id_eleccion, id_usuario, formato):
+        """
+        RF-014 y RF-024 (admin y docente): CSV o PDF, solo con la elección finalizada,
+        aunque el admin pueda ver los resultados en vivo durante la votación.
+        Devuelve los bytes del archivo en 'contenido'.
+        """
+        try:
+            if formato not in ('csv', 'pdf'):
+                return fallo('Formato no válido: usa csv o pdf')
+
+            eleccion = obtener_eleccion_de_institucion(id_eleccion, id_usuario)
+            if not eleccion:
+                return fallo(MSG_NO_ENCONTRADA, 'no_encontrado')
+
+            ahora = datetime.now()
+            etapa = calcular_etapa(eleccion, ahora)
+            if etapa != ETAPA_FINALIZADA:
+                return fallo('Los resultados solo se pueden exportar cuando la elección ha finalizado',
+                             'prohibido')
+
+            datos = self._armar_resultados(eleccion, etapa)
+            if datos is None:
+                return fallo(MSG_SISTEMA, 'error_sistema')
+
+            datos['institucion'] = Resultado.nombre_institucion(eleccion['id_institucion'])
+            datos['fecha_inicio'] = eleccion['fecha_inicio']
+            datos['fecha_fin'] = eleccion['fecha_fin']
+            datos['generado'] = ahora
+
+            contenido = exportes.generar_csv(datos) if formato == 'csv' else exportes.generar_pdf(datos)
+            return {'success': True, 'contenido': contenido}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al exportar resultados: {e}")
             return fallo(MSG_SISTEMA, 'error_sistema')

@@ -9,6 +9,8 @@ from app.utils.etapas import (
     calcular_etapa, ETAPA_VOTACION, ETAPA_PAUSADA, ETAPA_FINALIZADA
 )
 from app.utils.respuestas import fallo
+from datetime import datetime
+from app.utils import certificado
 
 logger = logging.getLogger(__name__)
 
@@ -147,4 +149,28 @@ class VotoController:
             raise
         except Exception as e:
             logger.error(f"Error al obtener historial de participación: {e}")
+            return fallo(MSG_SISTEMA, 'error_sistema')
+        
+    def generar_certificado(self, id_usuario, id_eleccion):
+        """
+        RF-028: PDF que acredita que el estudiante votó en la elección. Sale del registro
+        de votación, no del voto: no revela por quién se votó. El código es el mismo que
+        recibió al votar y que aparece en su historial.
+        """
+        try:
+            datos = Voto.datos_certificado(id_usuario, id_eleccion)
+            # Misma respuesta si la elección no existe o si no votó: no se revela cuál de las dos
+            if not datos:
+                return fallo('No tienes un voto registrado en esta elección', 'no_encontrado')
+            if not datos['fecha_voto']:
+                return fallo('Tu registro de votación no tiene fecha: contacta al administrador',
+                             'error_sistema')
+
+            datos['codigo'] = Voto.codigo_certificado(datos['id_registro'], datos['fecha_voto'])
+            datos['generado'] = datetime.now()
+            return {'success': True, 'contenido': certificado.generar_pdf(datos)}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al generar certificado: {e}")
             return fallo(MSG_SISTEMA, 'error_sistema')

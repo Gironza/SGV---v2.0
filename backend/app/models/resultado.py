@@ -93,3 +93,11 @@ class Resultado:
         return db.ejecutar_query(
             query, (id_eleccion, id_institucion, id_eleccion, id_eleccion)
         )
+    
+    @staticmethod
+    def nombre_institucion(id_institucion):
+        db = Database()
+        filas = db.ejecutar_query(
+            "SELECT nombre FROM instituciones WHERE id_institucion = %s", (id_institucion,)
+        )
+        return filas[0]['nombre'] if filas else ''
