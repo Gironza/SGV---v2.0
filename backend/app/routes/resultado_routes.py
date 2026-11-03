@@ -1,15 +1,24 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.schemas.resultado_schema import ResultadoEleccionOut
+from fastapi import APIRouter, Depends
+from app.schemas.resultado_schema import ResultadoEleccionOut, EstadisticasEleccionOut
 from app.controllers.resultado_controller import ResultadoController
-from app.middleware.auth_middleware import obtener_usuario_actual
+from app.middleware.auth_middleware import obtener_usuario_actual, requerir_rol
+from app.utils.respuestas import resolver
 
 router = APIRouter(prefix="/resultados", tags=["Resultados"])
 resultado_controller = ResultadoController()
 
 
+# RF-021, 029 y 038: la visibilidad depende del rol, la etapa y fecha_publicacion_resultados
 @router.get("/{id_eleccion}", response_model=ResultadoEleccionOut)
 def ver_resultados(id_eleccion: int, usuario_actual: dict = Depends(obtener_usuario_actual)):
-    resultado = resultado_controller.obtener_resultados(id_eleccion, usuario_actual['id_usuario'])
-    if not resultado['success']:
-        raise HTTPException(status_code=404, detail=resultado['message'])
-    return resultado
+    return resolver(resultado_controller.obtener_resultados(
+        id_eleccion, usuario_actual['id_usuario'], usuario_actual['id_rol']
+    ))
+
+
+# RF-013: estadísticas de participación (solo administrador)
+@router.get("/{id_eleccion}/estadisticas", response_model=EstadisticasEleccionOut)
+def ver_estadisticas(id_eleccion: int, usuario_actual: dict = Depends(requerir_rol(1))):
+    return resolver(resultado_controller.obtener_estadisticas(
+        id_eleccion, usuario_actual['id_usuario']
+    ))

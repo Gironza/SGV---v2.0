@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends
 from app.schemas.voto_schema import (
-    VotoCreate, EleccionDisponibleOut, EstadoVotoResponse, VotoConfirmadoResponse
+    VotoCreate, EleccionDisponibleOut, EstadoVotoResponse, VotoConfirmadoResponse, HistorialVotoOut
 )
 from app.controllers.voto_controller import VotoController
 from app.middleware.auth_middleware import requerir_rol
@@ -17,6 +17,12 @@ ROL_ESTUDIANTE = 3
 @router.get("/disponibles", response_model=List[EleccionDisponibleOut])
 def ver_disponibles(usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))):
     return resolver(voto_controller.listar_disponibles(usuario_actual['id_usuario']))['elecciones']
+
+
+# RF-031: elecciones en las que ya participó el estudiante (sin revelar por quién votó)
+@router.get("/historial", response_model=List[HistorialVotoOut])
+def ver_historial(usuario_actual: dict = Depends(requerir_rol(ROL_ESTUDIANTE))):
+    return resolver(voto_controller.historial(usuario_actual['id_usuario']))['historial']
 
 
 @router.get("/{id_eleccion}/estado", response_model=EstadoVotoResponse)

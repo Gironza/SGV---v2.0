@@ -88,3 +88,16 @@ class Voto:
         """
         base = f"{id_registro}-{fecha_voto.isoformat()}"
         return hashlib.sha256(base.encode()).hexdigest()[:12].upper()
+    
+    @staticmethod
+    def historial(id_usuario):
+        """Elecciones en las que el usuario votó. Nunca dice por quién."""
+        db = Database()
+        query = """
+        SELECT r.id_registro, r.id_eleccion, e.titulo, r.fecha_voto
+        FROM registros_votacion r
+        INNER JOIN elecciones e ON r.id_eleccion = e.id_eleccion
+        WHERE r.id_usuario = %s
+        ORDER BY r.fecha_voto DESC, r.id_registro DESC
+        """
+        return db.ejecutar_query(query, (id_usuario,))

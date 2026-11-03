@@ -125,3 +125,26 @@ class VotoController:
         except Exception as e:
             logger.error(f"Error al registrar voto: {e}")
             return fallo(MSG_SISTEMA, 'error_sistema')
+
+    def historial(self, id_usuario):
+        """RF-031: elecciones en las que participó el estudiante, sin revelar por quién."""
+        try:
+            filas = Voto.historial(id_usuario)
+            if filas is None:
+                return fallo(MSG_SISTEMA, 'error_sistema')
+
+            historial = [{
+                'id_eleccion': f['id_eleccion'],
+                'titulo': f['titulo'],
+                'fecha_voto': f['fecha_voto'],
+                'codigo_certificado': (
+                    Voto.codigo_certificado(f['id_registro'], f['fecha_voto'])
+                    if f['fecha_voto'] else None
+                ),
+            } for f in filas]
+            return {'success': True, 'historial': historial}
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error al obtener historial de participación: {e}")
+            return fallo(MSG_SISTEMA, 'error_sistema')

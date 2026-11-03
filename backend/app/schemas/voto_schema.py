@@ -28,3 +28,9 @@ class VotoConfirmadoResponse(BaseModel):
     message: str
     codigo_certificado: str
     fecha_voto: datetime
+
+class HistorialVotoOut(BaseModel):
+    id_eleccion: int
+    titulo: str
+    fecha_voto: Optional[datetime] = None
+    codigo_certificado: Optional[str] = None

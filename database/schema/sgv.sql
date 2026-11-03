@@ -1,15 +1,10 @@
 -- ============================================================
--- SGV - Sistema de gestion de Votaciones
--- Script de Base de datos - consolidado (v2)
--- Es para crear la BD desde cero (Docker). Los catálogos
--- (roles, estados, tipos de documento) van en database/seeds.
+-- SGV - Sistema de Gestión de Votaciones
+-- Script base de la BD (v3): crea el esquema desde cero (Docker).
+-- Ya incluye las migraciones 001 y 002: no hay que correrlas aparte.
+-- Los catálogos (roles, estados, tipos de documento) van en database/seeds.
+-- Requiere PostgreSQL 13 o superior (gen_random_uuid()).
 -- ============================================================
-
---CREATE DATABASE SGV;
-
--- Conectarse con: \c SGV   (en psql)
--- o configurar la cadena de conexión en el backend (FastAPI/psycopg2).
-
 
 CREATE TABLE instituciones(
     id_institucion SERIAL PRIMARY KEY,
@@ -63,6 +58,7 @@ CREATE TABLE usuarios (
     curso VARCHAR(20),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     id_rol INT NOT NULL,
+    foto VARCHAR(255),  -- existe en la BD actual; el código aún no la usa
     FOREIGN KEY (id_institucion) REFERENCES instituciones(id_institucion),
     FOREIGN KEY (id_rol) REFERENCES roles(id_rol),
     FOREIGN KEY (id_tipo_doc) REFERENCES tipos_documento(id_tipo_doc)
@@ -78,10 +74,31 @@ CREATE TABLE elecciones (
     fecha_inicio TIMESTAMP NOT NULL,
     fecha_fin TIMESTAMP NOT NULL,
     fecha_publicacion_resultados TIMESTAMP,
-    id_estado_eleccion INT DEFAULT 1 NOT NULL,
+    id_estado_eleccion INT DEFAULT 1 NOT NULL,   -- 1 Activa, 2 Finalizada, 3 Pendiente (pausa)
     id_institucion INT NOT NULL,
     FOREIGN KEY (id_institucion) REFERENCES instituciones(id_institucion),
-    FOREIGN KEY (id_estado_eleccion) REFERENCES estados_eleccion(id_estado_eleccion)
+    FOREIGN KEY (id_estado_eleccion) REFERENCES estados_eleccion(id_estado_eleccion),
+    -- Migración 001: orden de las fechas. Las de inscripción pueden ser NULL
+    -- (elecciones antiguas), pero si una viene, la otra también.
+    CONSTRAINT chk_elecciones_orden_fechas CHECK (
+        fecha_inicio < fecha_fin
+        AND (fecha_inicio_inscripcion IS NULL) = (fecha_fin_inscripcion IS NULL)
+        AND (fecha_inicio_inscripcion IS NULL
+             OR fecha_inicio_inscripcion < fecha_fin_inscripcion)
+        AND (fecha_fin_inscripcion IS NULL
+             OR fecha_fin_inscripcion <= fecha_inicio)
+    )
+);
+
+
+-- Cursos que pueden postularse o votar en cada elección.
+-- Sin filas de un tipo = ese paso está abierto a todos los cursos.
+CREATE TABLE elecciones_cursos (
+    id_eleccion INT NOT NULL,
+    curso VARCHAR(20) NOT NULL,
+    tipo VARCHAR(12) NOT NULL CHECK (tipo IN ('postulacion', 'votacion')),
+    PRIMARY KEY (id_eleccion, curso, tipo),
+    FOREIGN KEY (id_eleccion) REFERENCES elecciones(id_eleccion) ON DELETE CASCADE
 );
 
 
@@ -100,11 +117,12 @@ CREATE TABLE candidatos (
 );
 
 
+-- Voto secreto (migración 002): sin usuario, sin fecha y con id aleatorio,
+-- para que no se pueda cruzar con registros_votacion.
 CREATE TABLE votos (
-    id_voto SERIAL PRIMARY KEY,
+    id_voto UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_eleccion INT NOT NULL,
-    id_candidato INT NULL,
-    fecha_voto TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id_candidato INT NULL,  -- NULL = voto en blanco
     FOREIGN KEY (id_eleccion) REFERENCES elecciones(id_eleccion),
     FOREIGN KEY (id_candidato) REFERENCES candidatos(id_candidato)
 );
@@ -119,56 +137,3 @@ CREATE TABLE registros_votacion(
     FOREIGN KEY (id_eleccion) REFERENCES elecciones(id_eleccion),
     CONSTRAINT uq_registro_usuario_eleccion UNIQUE (id_usuario, id_eleccion)
 );
-
-BEGIN;
-
--- 1) Nuevo estado de candidatura: el candidato pidió retirarse
---    y espera que un admin o docente lo resuelva.
-
-
--- 2) Orden de las fechas de la elección.
---    Las fechas de inscripción pueden ser NULL (elecciones antiguas),
---    pero si una viene, la otra también.
-
-UPDATE candidatos SET foto = NULL WHERE foto IS NOT NULL AND foto NOT LIKE '/uploads/candidatos/%';
-
-CREATE TABLE elecciones_cursos (
-    id_eleccion INT NOT NULL REFERENCES elecciones(id_eleccion) ON DELETE CASCADE,
-    curso VARCHAR(20) NOT NULL,
-    tipo VARCHAR(12) NOT NULL CHECK (tipo IN ('postulacion', 'votacion')),
-    PRIMARY KEY (id_eleccion, curso, tipo)
-);
-
-ALTER TABLE elecciones
-    DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
-
-ALTER TABLE elecciones
-    ADD CONSTRAINT chk_elecciones_orden_fechas CHECK (
-        fecha_inicio < fecha_fin
-        AND (fecha_inicio_inscripcion IS NULL) = (fecha_fin_inscripcion IS NULL)
-        AND (fecha_inicio_inscripcion IS NULL
-             OR fecha_inicio_inscripcion < fecha_fin_inscripcion)
-        AND (fecha_fin_inscripcion IS NULL
-             OR fecha_fin_inscripcion <= fecha_inicio)
-    );
-
-COMMIT;
-
-BEGIN;
-ALTER TABLE elecciones DROP CONSTRAINT IF EXISTS chk_elecciones_orden_fechas;
-DELETE FROM estados_candidatura WHERE id_estado_candidatura = 5;
-COMMIT;
-
-
-BEGIN;
-
--- id_voto: de serial a UUID aleatorio (v4, no ordenable) para que no delate el orden de voto
-ALTER TABLE votos ALTER COLUMN id_voto DROP DEFAULT;
-ALTER TABLE votos ALTER COLUMN id_voto TYPE uuid USING gen_random_uuid();
-ALTER TABLE votos ALTER COLUMN id_voto SET DEFAULT gen_random_uuid();
-DROP SEQUENCE IF EXISTS votos_id_voto_seq;
-
--- el voto ya no lleva fecha: no se puede cruzar con registros_votacion
-ALTER TABLE votos DROP COLUMN fecha_voto;
-
-COMMIT;
