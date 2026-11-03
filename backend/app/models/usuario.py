@@ -98,22 +98,80 @@ class Usuario:
         return [fila['curso'] for fila in resultado]
  
     @staticmethod
-    def extraer_usuarios(id_institucion=None):
+    def _condiciones_listado(id_institucion, roles, rol=None, curso=None,
+                             activo=None, q=None):
+        """WHERE del listado (compartido por el conteo y la página) y sus parámetros."""
+        condiciones = ["u.id_institucion = %s", "u.id_rol = ANY(%s)"]
+        params = [id_institucion, list(roles)]
+
+        if rol is not None:
+            condiciones.append("u.id_rol = %s")
+            params.append(rol)
+        if curso:
+            condiciones.append("LOWER(u.curso) = LOWER(%s)")
+            params.append(curso.strip())
+        if activo is not None:
+            condiciones.append("u.activo = %s")
+            params.append(activo)
+        if q and q.strip():
+            # strpos y no ILIKE: así %, _ y \ del texto buscado se toman literales
+            condiciones.append(
+                "strpos(LOWER(u.nombre || ' ' || u.apellido || ' ' || u.documento"
+                " || ' ' || u.correo), %s) > 0"
+            )
+            params.append(q.strip().lower())
+
+        return " AND ".join(condiciones), params
+
+    @staticmethod
+    def listar(id_institucion, roles, rol=None, curso=None, activo=None, q=None,
+               limite=20, desplazamiento=0):
+        """
+        Usuarios de la institución con los roles indicados, filtrados y paginados.
+        Devuelve {'total', 'usuarios'} o None si alguna consulta falla.
+        """
+        db = Database()
+        donde, params = Usuario._condiciones_listado(
+            id_institucion, roles, rol, curso, activo, q
+        )
+
+        total = db.ejecutar_query(
+            f"SELECT COUNT(*) AS total FROM usuarios u WHERE {donde}", tuple(params)
+        )
+        if total is None:
+            return None
+
+        filas = db.ejecutar_query(f"""
+            SELECT u.id_usuario, u.documento, u.id_tipo_doc, td.nombre AS tipo_documento,
+                   u.nombre, u.apellido, u.correo, u.curso, u.activo,
+                   u.id_rol, r.nombre AS rol_nombre
+            FROM usuarios u
+            INNER JOIN roles r ON u.id_rol = r.id_rol
+            INNER JOIN tipos_documento td ON u.id_tipo_doc = td.id_tipo_doc
+            WHERE {donde}
+            ORDER BY u.apellido, u.nombre, u.id_usuario
+            LIMIT %s OFFSET %s
+        """, tuple(params + [limite, desplazamiento]))
+        if filas is None:
+            return None
+
+        return {'total': total[0]['total'], 'usuarios': filas}
+
+    @staticmethod
+    def obtener_detalle(id_usuario):
+        """Datos de gestión de un usuario (incluye id_institucion para validar acceso)."""
         db = Database()
         query = """
-        SELECT
-            u.id_usuario, u.documento, u.nombre, u.apellido, u.correo,
-            u.curso, u.activo, r.nombre AS rol_nombre
+        SELECT u.id_usuario, u.id_institucion, u.documento, u.id_tipo_doc,
+               td.nombre AS tipo_documento, u.nombre, u.apellido, u.correo,
+               u.curso, u.activo, u.id_rol, r.nombre AS rol_nombre
         FROM usuarios u
         INNER JOIN roles r ON u.id_rol = r.id_rol
+        INNER JOIN tipos_documento td ON u.id_tipo_doc = td.id_tipo_doc
+        WHERE u.id_usuario = %s
         """
-        params = None
-        if id_institucion is not None:
-            query += " WHERE u.id_institucion = %s"
-            params = (id_institucion,)
-        query += " ORDER BY u.id_usuario"
- 
-        return db.ejecutar_query(query, params)
+        resultado = db.ejecutar_query(query, (id_usuario,))
+        return resultado[0] if resultado else None
  
     @staticmethod
     def usuario_existente(correo):

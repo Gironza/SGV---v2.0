@@ -16,6 +16,19 @@ def obtener_eleccion_de_institucion(id_eleccion, id_usuario):
     return eleccion
 
 
+def obtener_usuario_de_institucion(id_objetivo, id_actor):
+    """
+    Devuelve el usuario solo si es de la misma institución que quien consulta.
+    Si no existe o es de otra institución devuelve None (mismo mensaje en ambos casos).
+    """
+    usuario = Usuario.obtener_detalle(id_objetivo)
+    if not usuario:
+        return None
+    if Usuario.obtener_institucion(id_actor) != usuario['id_institucion']:
+        return None
+    return usuario
+
+
 def curso_habilitado(curso_usuario, cursos_permitidos):
     """
     Lista vacía = elección abierta a todos los cursos. Con lista, el curso del
