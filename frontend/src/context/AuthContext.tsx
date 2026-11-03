@@ -1,16 +1,19 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import authService, { type UsuarioResponse } from "../services/auth.service";
+import api from "../services/api";
 
 interface AuthContextType {
   usuario: UsuarioResponse | null;
   isAuthenticated: boolean;
   login: (correo: string, password: string) => Promise<UsuarioResponse>;
   logout: () => void;
+  /** Vuelve a leer GET /auth/me y actualiza el usuario en memoria y en
+   *  localStorage (útil tras editar el perfil, para que el header cambie). */
+  refrescarUsuario: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Recupera la sesión guardada en localStorage al recargar la página.
 function cargarUsuarioGuardado(): UsuarioResponse | null {
   const raw = localStorage.getItem("usuario");
   if (!raw) return null;
@@ -40,9 +43,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
   }
 
+  async function refrescarUsuario() {
+    const { data } = await api.get<UsuarioResponse>("/auth/me");
+    const nuevo: UsuarioResponse = {
+      id_usuario: data.id_usuario,
+      correo: data.correo,
+      nombre: data.nombre,
+      apellido: data.apellido,
+      curso: data.curso,
+      id_rol: data.id_rol,
+      rol_nombre: data.rol_nombre,
+    };
+    localStorage.setItem("usuario", JSON.stringify(nuevo));
+    setUsuario(nuevo);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ usuario, isAuthenticated: !!usuario, login, logout }}
+      value={{ usuario, isAuthenticated: !!usuario, login, logout, refrescarUsuario }}
     >
       {children}
     </AuthContext.Provider>

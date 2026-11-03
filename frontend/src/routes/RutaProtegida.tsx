@@ -1,27 +1,30 @@
 import type { ReactNode } from "react";
-import { Navigate } from "react-router";
+import { Navigate, Outlet } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { idRolToRol } from "../types";
+import { ROL_HOME } from "../config/navigation";
 
 interface RutaProtegidaProps {
-  children: ReactNode;
-  rolesPermitidos: number[]; // ej: [1] para Admin, [2] para Docente
+  /** Opcional: sin children actúa como ruta de layout y renderiza <Outlet />. */
+  children?: ReactNode;
+  rolesPermitidos: number[]; // 1 Admin, 2 Docente, 3 Estudiante
 }
 
-// Protege una ruta según autenticación Y rol.
-// - Si no hay sesión -> manda a /login
-// - Si hay sesión pero el rol no coincide -> manda a / (inicio)
+// - Sin sesión -> /login
+// - Con sesión pero rol no permitido -> al inicio de SU propio panel
+//   (el que decide en última instancia es el backend con 403).
 function RutaProtegida({ children, rolesPermitidos }: RutaProtegidaProps) {
   const { usuario, isAuthenticated } = useAuth();
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !usuario) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!rolesPermitidos.includes(usuario!.id_rol)) {
-    return <Navigate to="/" replace />;
+  if (!rolesPermitidos.includes(usuario.id_rol)) {
+    return <Navigate to={ROL_HOME[idRolToRol(usuario.id_rol)]} replace />;
   }
 
-  return <>{children}</>;
+  return <>{children ?? <Outlet />}</>;
 }
 
 export default RutaProtegida;

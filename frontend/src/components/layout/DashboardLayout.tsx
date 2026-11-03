@@ -1,56 +1,25 @@
 import type { ReactNode } from "react";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
-import { NAV_BY_ROLE, ROL_ACCENT } from "../../config/navigation";
-import type { Rol } from "../../types";
+import { useTituloPagina } from "../../context/PaginaContext";
 
+// COMPATIBILIDAD TEMPORAL. El shell (sidebar + header) ahora lo da
+// AppLayout. Este componente solo existe para que Admin.tsx, Docente.tsx
+// y Estudiante.tsx sigan funcionando hasta que se reemplacen por las
+// páginas nuevas: pasa su título al header y renderiza el contenido.
+// Se elimina cuando ninguna página lo importe.
 interface DashboardLayoutProps {
-  rol: Rol;
   titulo: string;
-  subtitulo: string;
-  usuario: { nombre: string; correo: string; avatarUrl?: string };
-  institucion?: string;
-  notificaciones?: number;
+  subtitulo?: string;
   children: ReactNode;
+  // Props antiguas: se aceptan para no romper el tipado, ya no se usan.
+  rol?: unknown;
+  usuario?: unknown;
+  institucion?: unknown;
+  notificaciones?: unknown;
 }
 
-/**
- * Punto único de entrada para armar cualquier panel del sistema.
- *
- * Antes: Admin.tsx, Docente.tsx y Estudiante.tsx repetían el mismo <div className="dashboard">
- * con sidebar + topbar escritos a mano, y Docente.tsx usaba una estructura
- * de página completamente distinta (sin sidebar). Ahora los 4 roles comparten
- * el mismo esqueleto visual y solo cambian su `rol`, título y contenido.
- *
- * Uso:
- *   <DashboardLayout rol="docente" titulo="Panel Docente" ...>
- *     ...contenido propio del panel...
- *   </DashboardLayout>
- */
-export function DashboardLayout({
-  rol,
-  titulo,
-  subtitulo,
-  usuario,
-  institucion,
-  notificaciones,
-  children,
-}: DashboardLayoutProps) {
-  return (
-    <div className="app-shell">
-      <Sidebar items={NAV_BY_ROLE[rol]} accent={ROL_ACCENT[rol]} rol={rol} />
-      <div className="app-main">
-        <Topbar
-          titulo={titulo}
-          subtitulo={subtitulo}
-          institucion={institucion}
-          notificaciones={notificaciones}
-          usuario={usuario}
-        />
-        <div className="app-content">{children}</div>
-      </div>
-    </div>
-  );
+export function DashboardLayout({ titulo, subtitulo, children }: DashboardLayoutProps) {
+  useTituloPagina(titulo, subtitulo);
+  return <>{children}</>;
 }
 
 export default DashboardLayout;
