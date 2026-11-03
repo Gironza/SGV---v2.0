@@ -1,4 +1,8 @@
 import logging
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from app.utils import carga_masiva
 from app.config.database import BaseDatosNoDisponible
 from app.models.candidato import Candidato
 from app.models.usuario import (
@@ -10,11 +14,15 @@ from app.utils.respuestas import fallo
 from app.utils.security import hashear_password
 from app.models.usuario import (
     Usuario, RESULTADO_OK, RESULTADO_NO_ENCONTRADO, RESULTADO_ULTIMO_ADMIN,
-    RESULTADO_CON_HISTORIAL
+    RESULTADO_CON_HISTORIAL, RESULTADO_DUPLICADO
 )
 
 
 logger = logging.getLogger(__name__)
+
+MAX_ERRORES_MOSTRADOS = 50
+HILOS_HASH = min(8, os.cpu_count() or 2)  # bcrypt es lento: se hashea en varios hilos
+
 
 ROL_ADMIN = 1
 ROL_DOCENTE = 2
@@ -254,7 +262,7 @@ class UsuarioController:
             logger.error(f"Error al cambiar curso: {e}")
             return fallo(MSG_SISTEMA, 'error_sistema')
 
-        @staticmethod
+    @staticmethod
     def _mensaje_historial(historial):
         partes = []
         if historial['candidaturas']:
@@ -298,4 +306,92 @@ class UsuarioController:
             raise
         except Exception as e:
             logger.error(f"Error al eliminar usuario: {e}")
+            return fallo(MSG_SISTEMA, 'error_sistema')
+    @staticmethod
+    def _fallo_carga(errores):
+        """Aborta la carga: cuenta todos los errores y muestra los primeros 50."""
+        total = len(errores)
+        mostrados = errores[:MAX_ERRORES_MOSTRADOS]
+        detalle = '; '.join(
+            f"fila {e['fila']} ({e['campo']}): {e['motivo']}" for e in mostrados
+        )
+        if total > len(mostrados):
+            detalle += f"; …y {total - len(mostrados)} error(es) más"
+        return {
+            'success': False,
+            'message': f'El archivo tiene {total} error(es) y no se registró ningún estudiante. {detalle}',
+            'errores': mostrados,
+            'total_errores': total,
+        }
+
+    # ---------- Carga masiva (RF-012) ----------
+
+    def cargar_estudiantes(self, id_actor, contenido):
+        """
+        Crea estudiantes desde un CSV. Todo o nada: si cualquier fila tiene un error
+        (en el archivo o contra la BD) no se registra ninguno y se informan todos.
+        La contraseña inicial de cada estudiante es su documento.
+        """
+        try:
+            if not contenido:
+                return fallo('El archivo está vacío')
+            if len(contenido) > carga_masiva.MAX_BYTES:
+                return fallo('El archivo pesa más de 2 MB', 'demasiado_grande')
+
+            id_institucion = Usuario.obtener_institucion(id_actor)
+            if id_institucion is None:
+                return fallo('No se pudo determinar la institución del usuario')
+
+            try:
+                filas = carga_masiva.leer_filas(contenido)
+            except carga_masiva.ArchivoInvalido as e:
+                return fallo(str(e))
+
+            tipos_db = Usuario.listar_tipos_documento()
+            if tipos_db is None:
+                return fallo(MSG_SISTEMA, 'error_sistema')
+            tipos = {t['nombre'].lower(): t['id_tipo_doc'] for t in tipos_db}
+
+            validas, errores, documentos, correos = carga_masiva.validar_filas(filas, tipos)
+
+            # Duplicados contra la BD, aunque ya haya otros errores, para informar todo junto
+            existentes_doc = Usuario.documentos_existentes(list(documentos))
+            existentes_correo = Usuario.correos_existentes(list(correos))
+            if existentes_doc is None or existentes_correo is None:
+                return fallo(MSG_SISTEMA, 'error_sistema')
+            for documento in existentes_doc:
+                errores.append({'fila': documentos[documento], 'campo': 'documento',
+                                'motivo': 'ya existe un usuario con este documento'})
+            for correo in existentes_correo:
+                errores.append({'fila': correos[correo], 'campo': 'correo',
+                                'motivo': 'ya existe un usuario con este correo'})
+
+            if errores:
+                errores.sort(key=lambda e: (e['fila'], e['campo']))
+                return self._fallo_carga(errores)
+
+            inicio = time.perf_counter()
+            with ThreadPoolExecutor(max_workers=HILOS_HASH) as pool:
+                hashes = list(pool.map(hashear_password, [f['documento'] for f in validas]))
+            estudiantes = [{**f, 'contrasena': h} for f, h in zip(validas, hashes)]
+
+            resultado = Usuario.crear_estudiantes_masivo(id_institucion, estudiantes)
+            if resultado == RESULTADO_DUPLICADO:
+                return fallo('Mientras se procesaba el archivo se registró un usuario con un documento '
+                             'o correo del archivo. No se registró ningún estudiante: intenta de nuevo',
+                             'conflicto')
+            if resultado != RESULTADO_OK:
+                return fallo('Error al registrar los estudiantes', 'error_sistema')
+
+            return {
+                'success': True,
+                'message': f'{len(estudiantes)} estudiante(s) registrados. '
+                           'Su contraseña inicial es su número de documento',
+                'creados': len(estudiantes),
+                'duracion_segundos': round(time.perf_counter() - inicio, 2),
+            }
+        except BaseDatosNoDisponible:
+            raise
+        except Exception as e:
+            logger.error(f"Error en la carga masiva: {e}")
             return fallo(MSG_SISTEMA, 'error_sistema')

@@ -1,6 +1,6 @@
 import logging
 from psycopg2 import errors
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, execute_values
 from app.config.database import Database
 
 logger = logging.getLogger(__name__)
@@ -10,6 +10,7 @@ RESULTADO_OK = 'ok'
 RESULTADO_NO_ENCONTRADO = 'no_encontrado'
 RESULTADO_ULTIMO_ADMIN = 'ultimo_admin'
 RESULTADO_CON_HISTORIAL = 'con_historial'
+RESULTADO_DUPLICADO = 'duplicado'
 
 from app.config.database import Database
  
@@ -425,6 +426,68 @@ class Usuario:
         except Exception as e:
             conexion.rollback()
             logger.error(f"Error al eliminar usuario: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+            conexion.close()
+    
+    @staticmethod
+    def listar_tipos_documento():
+        db = Database()
+        return db.ejecutar_query("SELECT id_tipo_doc, nombre FROM tipos_documento")
+
+    @staticmethod
+    def documentos_existentes(documentos):
+        """Documentos de la lista que ya existen. None si la consulta falla."""
+        db = Database()
+        filas = db.ejecutar_query(
+            "SELECT documento FROM usuarios WHERE documento = ANY(%s)", (list(documentos),)
+        )
+        return None if filas is None else {f['documento'] for f in filas}
+
+    @staticmethod
+    def correos_existentes(correos):
+        """Correos (en minúsculas) de la lista que ya existen, sin distinguir mayúsculas."""
+        db = Database()
+        filas = db.ejecutar_query(
+            "SELECT LOWER(correo) AS correo FROM usuarios WHERE LOWER(correo) = ANY(%s)",
+            (list(correos),)
+        )
+        return None if filas is None else {f['correo'] for f in filas}
+
+    @staticmethod
+    def crear_estudiantes_masivo(id_institucion, estudiantes):
+        """
+        Inserta todos los estudiantes en UNA transacción: o entran todos o ninguno.
+        Devuelve RESULTADO_OK, RESULTADO_DUPLICADO (alguien registró un documento o
+        correo del archivo mientras se procesaba) o None si falla.
+        """
+        db = Database()
+        conexion = db.obtener_conexion()
+        if not conexion:
+            return None
+
+        cursor = None
+        try:
+            cursor = conexion.cursor()
+            execute_values(cursor, """
+                INSERT INTO usuarios (id_institucion, documento, id_tipo_doc, nombre,
+                                      apellido, correo, contrasena, curso, id_rol)
+                VALUES %s
+            """, [
+                (id_institucion, e['documento'], e['id_tipo_doc'], e['nombre'],
+                 e['apellido'], e['correo'], e['contrasena'], e['curso'], 3)
+                for e in estudiantes
+            ])
+            conexion.commit()
+            return RESULTADO_OK
+        except errors.UniqueViolation:
+            conexion.rollback()
+            return RESULTADO_DUPLICADO
+        except Exception as e:
+            conexion.rollback()
+            logger.error(f"Error en la carga masiva de estudiantes: {e}")
             return None
         finally:
             if cursor:

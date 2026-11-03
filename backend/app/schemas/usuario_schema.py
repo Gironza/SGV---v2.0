@@ -75,3 +75,9 @@ class EstadoUsuarioResponse(BaseModel):
 class MensajeResponse(BaseModel):
     success: bool
     message: str
+
+class CargaMasivaResponse(BaseModel):
+    success: bool
+    message: str
+    creados: int
+    duracion_segundos: float  # para medir cuánto tarda el hash de las contraseñas
