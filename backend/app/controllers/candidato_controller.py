@@ -4,8 +4,9 @@ from app.models.candidato import (
     Candidato, ESTADO_APROBADA, ESTADO_RECHAZADA, ESTADO_RETIRADA,
     ESTADO_RETIRO_SOLICITADO
 )
-from app.models.eleccion import Eleccion
-from app.utils.acceso import obtener_eleccion_de_institucion
+from app.models.usuario import Usuario
+from app.models.eleccion import Eleccion, TIPO_POSTULACION
+from app.utils.acceso import obtener_eleccion_de_institucion, curso_habilitado
 from app.utils.etapas import (
     calcular_etapa, ETAPA_PUBLICADA, ETAPA_POSTULACION, ETAPAS_SIN_INICIAR
 )
@@ -51,7 +52,7 @@ class CandidatoController:
     # ---------- Estudiante / candidato ----------
 
     def inscribir(self, id_usuario, id_eleccion):
-        """Postularse con un clic: queda Pendiente. Solo en etapa de postulación."""
+        """Postularse con un clic: queda Pendiente. Solo en etapa de postulación y con curso habilitado."""
         try:
             eleccion = obtener_eleccion_de_institucion(id_eleccion, id_usuario)
             if not eleccion:
@@ -62,6 +63,10 @@ class CandidatoController:
                 if etapa == ETAPA_PUBLICADA:
                     return _fallo('Las postulaciones de esta elección aún no han abierto')
                 return _fallo('El periodo de postulación de esta elección ya cerró')
+
+            cursos = Eleccion.obtener_cursos(id_eleccion)[TIPO_POSTULACION]
+            if not curso_habilitado(Usuario.obtener_curso(id_usuario), cursos):
+                return _fallo('Tu curso no está habilitado para postularse en esta elección', 'prohibido')
 
             if Candidato.ya_inscrito(id_usuario, id_eleccion):
                 return _fallo('Ya te postulaste en esta elección', 'conflicto')

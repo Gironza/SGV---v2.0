@@ -14,3 +14,16 @@ def obtener_eleccion_de_institucion(id_eleccion, id_usuario):
     if Usuario.obtener_institucion(id_usuario) != eleccion['id_institucion']:
         return None
     return eleccion
+
+
+def curso_habilitado(curso_usuario, cursos_permitidos):
+    """
+    Lista vacía = elección abierta a todos los cursos. Con lista, el curso del
+    usuario debe estar en ella (sin distinguir mayúsculas); sin curso no pasa.
+    """
+    if not cursos_permitidos:
+        return True
+    if not curso_usuario:
+        return False
+    permitidos = {c.strip().lower() for c in cursos_permitidos}
+    return curso_usuario.strip().lower() in permitidos

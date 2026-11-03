@@ -137,6 +137,14 @@ class Usuario:
         return resultado[0]['id_institucion'] if resultado else None
 
     @staticmethod
+    def obtener_curso(id_usuario):
+        """Curso del usuario; None si no tiene o no existe."""
+        db = Database()
+        query = "SELECT curso FROM usuarios WHERE id_usuario = %s"
+        resultado = db.ejecutar_query(query, (id_usuario,))
+        return resultado[0]['curso'] if resultado else None
+
+    @staticmethod
     def esta_activo(id_usuario):
         """True o False según el estado de la cuenta; None si el usuario no existe."""
         db = Database()
