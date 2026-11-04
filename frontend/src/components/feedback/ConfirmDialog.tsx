@@ -44,19 +44,32 @@ export function ConfirmDialog({
   children,
 }: ConfirmDialogProps) {
   const idTitulo = useId();
+  const refDialogo = useRef<HTMLDivElement>(null);
   const refCancelar = useRef<HTMLButtonElement>(null);
 
-  // Escape cierra (salvo mientras carga). Al abrir, el foco va a "Cancelar"
-  // para que un Enter accidental nunca confirme una acción destructiva.
+  // Siempre la versión más reciente de las props, sin re-ejecutar el efecto:
+  // si el efecto dependiera de onCancelar (una función nueva en cada render),
+  // el foco volvería a "Cancelar" con cada letra escrita en el diálogo.
+  const refOnCancelar = useRef(onCancelar);
+  const refCargando = useRef(cargando);
+  useEffect(() => {
+    refOnCancelar.current = onCancelar;
+    refCargando.current = cargando;
+  });
+
+  // Solo al ABRIR: foco en el primer campo del diálogo si lo hay; si no, en
+  // "Cancelar" (un Enter accidental nunca confirma algo destructivo).
+  // Escape cierra, salvo mientras carga.
   useEffect(() => {
     if (!abierto) return;
-    refCancelar.current?.focus();
+    const campo = refDialogo.current?.querySelector<HTMLElement>("textarea, input, select");
+    (campo ?? refCancelar.current)?.focus();
     function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape" && !cargando) onCancelar();
+      if (e.key === "Escape" && !refCargando.current) refOnCancelar.current();
     }
     document.addEventListener("keydown", tecla);
     return () => document.removeEventListener("keydown", tecla);
-  }, [abierto, cargando, onCancelar]);
+  }, [abierto]);
 
   if (!abierto) return null;
 
@@ -67,7 +80,7 @@ export function ConfirmDialog({
         if (e.target === e.currentTarget && !cargando) onCancelar();
       }}
     >
-      <div className="fb-dialog" role="dialog" aria-modal="true" aria-labelledby={idTitulo}>
+      <div className="fb-dialog" ref={refDialogo} role="dialog" aria-modal="true" aria-labelledby={idTitulo}>
         <h5 id={idTitulo} className="fb-dialog-title">{titulo}</h5>
         {mensaje && <div className="fb-dialog-body">{mensaje}</div>}
         {children}

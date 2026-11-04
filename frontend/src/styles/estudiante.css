@@ -1,0 +1,54 @@
+/* Panel del estudiante: tarjetas de elecciones, candidatos y tarjetón. */
+.est-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.est-card {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--sgv-border); border-radius: 12px; padding: 16px; background: #fff;
+}
+.est-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.est-card-head h4 { margin: 0; font-size: 15px; font-weight: 700; color: var(--sgv-ink); }
+.est-card-fecha { margin: 0; font-size: 13px; color: var(--sgv-muted); }
+.est-card-nota { margin: 0; font-size: 12.5px; color: var(--sgv-muted); }
+.est-card-nota.est-ok { color: var(--sgv-success); font-weight: 600; }
+.est-card-btn { margin-top: auto; align-self: flex-start; text-decoration: none; }
+
+.est-bloque { display: flex; flex-direction: column; gap: 12px; }
+.est-bloque p { margin: 0; font-size: 14px; color: var(--sgv-text); }
+.est-ayuda { margin: 0 0 14px; font-size: 13.5px; color: var(--sgv-muted); }
+
+/* Candidatos */
+.est-cand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.est-cand {
+  display: flex; flex-direction: column; gap: 10px; text-align: left;
+  border: 1px solid var(--sgv-border); border-radius: 12px; padding: 16px; background: #fff;
+}
+.est-cand-nombre { color: var(--sgv-ink); font-size: 15px; flex: 1; min-width: 0; }
+.est-cand-propuesta { margin: 0; font-size: 13.5px; color: var(--sgv-text); white-space: pre-wrap; word-break: break-word; }
+.est-cand-propuesta.is-vacia { color: var(--sgv-muted); font-style: italic; }
+
+/* Tarjetón */
+.est-cand-select { cursor: pointer; width: 100%; transition: border-color 0.15s, background 0.15s; }
+.est-cand-select:hover { border-color: var(--sgv-blue); }
+.est-cand-select.is-on { border-color: var(--sgv-blue); background: #f3f7ff; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+.est-radio { font-size: 20px; color: var(--sgv-border); margin-left: auto; }
+.est-cand-select.is-on .est-radio { color: var(--sgv-blue); }
+
+.est-blanco {
+  margin-top: 14px; display: flex; align-items: center; width: 100%;
+  border: 1px dashed var(--sgv-muted); border-radius: 12px; background: #fff; padding: 14px 16px;
+  font-weight: 600; color: var(--sgv-text); cursor: pointer; text-align: left;
+}
+.est-blanco.is-on { border-style: solid; border-color: var(--sgv-blue); background: #f3f7ff; color: var(--sgv-blue); }
+
+.est-barra-voto {
+  margin-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-radius: 12px; background: var(--sgv-bg); font-size: 14px;
+}
+.est-barra-voto button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.est-voto-ok {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 24px 12px;
+  color: var(--sgv-text);
+}
+.est-voto-ok > i { font-size: 36px; color: var(--sgv-success); }
+.est-voto-ok strong { color: var(--sgv-ink); font-size: 16px; }
+.est-voto-ok code { background: var(--sgv-bg); padding: 2px 8px; border-radius: 6px; }

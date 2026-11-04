@@ -12,7 +12,9 @@ import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
 import Docente from "./pages/Docente";
-import Estudiante from "./pages/Estudiante";
+import EstudianteInicio from "./pages/estudiante/Inicio";
+import EleccionesEstudiante from "./pages/estudiante/Elecciones";
+import EleccionEstudiante from "./pages/estudiante/EleccionEstudiante";
 import EstudianteHistorial from "./pages/EstudianteHistorial";
 import NoEncontrada from "./pages/NoEncontrada";
 import DemoFeedback from "./pages/DemoFeedback";
@@ -62,8 +64,9 @@ function App() {
 
             {/* ESTUDIANTE */}
             <Route path="/estudiante" element={<RutaProtegida rolesPermitidos={[3]} />}>
-              <Route index element={<Estudiante />} />
-              <Route path="elecciones" element={<PaginaEnConstruccion titulo="Elecciones" subtitulo="Postúlate o vota" etapa="3A" />} />
+              <Route index element={<EstudianteInicio />} />
+              <Route path="elecciones" element={<EleccionesEstudiante />} />
+              <Route path="elecciones/:id" element={<EleccionEstudiante />} />
               <Route path="historial" element={<EstudianteHistorial />} />
             </Route>
 
