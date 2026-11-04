@@ -1,26 +1,12 @@
-# Etapa 1: Build con Node y pnpm fijo
-FROM node:20-alpine AS workdir
-
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Instalamos pnpm de forma global y segura con npm (evita el lío de Corepack)
-RUN npm install -g pnpm
-
-# Copiar archivos de dependencias
-COPY package.json pnpm-lock.yaml* ./
-
-# Instalar dependencias con pnpm
-RUN pnpm install
-
-# Copiar el resto del código y compilar
+COPY package*.json ./
+RUN npm ci
 COPY . .
-RUN pnpm build
+RUN npm run build
 
-# Etapa 2: Servidor Web Nginx para producción
 FROM nginx:alpine
-
-COPY --from=workdir /app/dist /usr/share/nginx/html
-
+# Si usas CRA, cambia /app/dist por /app/build
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]

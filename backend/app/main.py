@@ -31,7 +31,9 @@ app = FastAPI(title="SGV", version="2.0.0")
 #cors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # el origen exacto de Vite (React - Frontend)
+    allow_origins=["http://localhost:5173",
+        "http://localhost:3001",
+        "http://localhost:5173",],  # el origen exacto de Vite (React - Frontend)
     allow_credentials=False,  # No se necesitan cookies, porque esta el header
     allow_methods=["*"],
     allow_headers=["*"],

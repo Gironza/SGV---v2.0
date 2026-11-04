@@ -1,53 +1,45 @@
-version: '3.8'
-
 services:
-  # --- BASE DE DATOS ---
   db:
-    image: postgres:15-alpine
-    container_name: sgv_db
-    restart: always
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456789
-      POSTGRES_DB: sgv
-    ports:
-      - "5433:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database:/docker-entrypoint-initdb.d      # Monta toda la carpeta
-      - ./init.sh:/docker-entrypoint-initdb.d/init.sh # Monta el script de orden
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema/sgv.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seeds/01_catalogos.sql:/docker-entrypoint-initdb.d/02-catalogos.sql
+      - ./database/seeds/02_datos_prueba.sql:/docker-entrypoint-initdb.d/03-datos-prueba.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-appdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # --- BACKEND ---
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: sgv_backend
-    restart: always
+    build: ./backend
+    restart: unless-stopped
     environment:
-      - DB_HOST=db
-      - DB_USER=postgres
-      - DB_PASSWORD=123456789
-      - DB_NAME=sgv
-      - DB_PORT=5432
-      - JWT_SECRET_KEY=bc2cd4df0d666396503d7a0ce3c383a1328ff541d654f6ae0e5b3ab0d78a99d8
-      - DATABASE_URL=postgresql://postgres:123456789@db:5432/sgv
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-appdb}
+      DB_USER: ${POSTGRES_USER:-app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-appdb}
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    depends_on:
-      - db
 
-  # --- FRONTEND ---
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: sgv_frontend
-    restart: always
-    ports:
-      - "80:80"
+    build: ./frontend
+    restart: unless-stopped
     depends_on:
       - backend
+    ports:
+      - "3001:80"
 
 volumes:
-  postgres_data:
+  pgdata:

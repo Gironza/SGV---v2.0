@@ -20,11 +20,11 @@ class BaseDatosNoDisponible(Exception):
 
 class Database:
     def __init__(self):
-        self.host = os.getenv("DB_HOST")
-        self.user = os.getenv("DB_USER")
-        self.password = os.getenv("DB_PASSWORD")
-        self.database = os.getenv("DB_NAME")
-        self.port = os.getenv("DB_PORT")
+        self.host = os.getenv("DB_HOST", "localhost")
+        self.user = os.getenv("DB_USER", "app")
+        self.password = os.getenv("DB_PASSWORD", "app")
+        self.database = os.getenv("DB_NAME", "appdb")
+        self.port = os.getenv("DB_PORT", "5432")
 
     def obtener_conexion(self):
         try:
