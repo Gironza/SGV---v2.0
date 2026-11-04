@@ -11,6 +11,14 @@ export const ESTADO_CANDIDATURA = {
 export type EstadoCandidaturaId =
   (typeof ESTADO_CANDIDATURA)[keyof typeof ESTADO_CANDIDATURA];
 
+/** Respuesta de PUT/DELETE /candidatos/{id}/foto. `foto` es la ruta
+ *  relativa servida por el backend (null si se quitó). */
+export interface FotoCandidatoResponse {
+  success: boolean;
+  message: string;
+  foto?: string | null;
+}
+
 /** CandidaturaDetalleOut: GET /candidatos/eleccion/{id}/gestion */
 export interface CandidaturaDetalleOut {
   id_candidato: number;

@@ -1,5 +1,5 @@
 import api from "./api";
-import type { CandidaturaDetalleOut } from "../types/candidatura";
+import type { CandidaturaDetalleOut, FotoCandidatoResponse } from "../types/candidatura";
 import type { CandidatoOut } from "../types/votacion";
 import type { MensajeResponse } from "../types/eleccion";
 
@@ -40,6 +40,24 @@ const candidatoService = {
    *  admin o docente la resuelva. */
   solicitarRetiro: (idCandidato: number) =>
     api.post<MensajeResponse>(`/candidatos/${idCandidato}/retiro`).then((r) => r.data),
+
+  /** El candidato aprobado edita su propuesta (1 a 2000 caracteres). */
+  editarPropuesta: (idCandidato: number, propuesta: string) =>
+    api.put<MensajeResponse>(`/candidatos/${idCandidato}`, { propuesta }).then((r) => r.data),
+
+  /** Sube la foto: FormData con el campo "archivo" (JPEG, máx. 2 MB). */
+  subirFoto: (idCandidato: number, archivo: File) => {
+    const datos = new FormData();
+    datos.append("archivo", archivo);
+    return api
+      .put<FotoCandidatoResponse>(`/candidatos/${idCandidato}/foto`, datos, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+
+  quitarFoto: (idCandidato: number) =>
+    api.delete<FotoCandidatoResponse>(`/candidatos/${idCandidato}/foto`).then((r) => r.data),
 
   // ---- Antiguos (los usa el Estudiante.tsx viejo; se pueden borrar con él) ----
   /** @deprecated El backend ya no acepta `propuesta` al inscribir. */

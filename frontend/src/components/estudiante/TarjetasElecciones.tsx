@@ -16,8 +16,10 @@ function accionDe(i: ItemEleccion): { texto: string; fecha: string } {
         texto: i.puedePostular ? "Ver / Postularme" : "Ver",
         fecha: `Postulación hasta ${formatearFecha(e.fecha_fin_inscripcion)}`,
       };
-    case "gracia":
+    case "moderacion":
       return { texto: "Ver", fecha: `La votación inicia ${formatearFecha(e.fecha_inicio)}` };
+    case "pausada":
+      return { texto: "Ver", fecha: "Votación en pausa" };
     case "votacion":
       return {
         texto: i.yaVoto || !i.puedeVotar ? "Ver" : "Votar",

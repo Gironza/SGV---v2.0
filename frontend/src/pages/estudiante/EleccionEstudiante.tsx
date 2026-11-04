@@ -19,8 +19,9 @@ import { mensajeError } from "../../utils/errores";
 /** Detalle de una elección para el estudiante. Lo que se muestra depende de
  *  la fase:
  *   postulación -> descripción + Postularme / mi candidatura
- *   gracia      -> descripción + candidatos presentes (solo ver)
- *   votación    -> descripción + tarjetón con la info de los candidatos */
+ *   moderación  -> descripción + candidatos presentes (solo ver)
+ *   votación    -> descripción + tarjetón con la info de los candidatos
+ *   pausada     -> aviso: la votación está en pausa */
 function EleccionEstudiante() {
   const { id } = useParams();
   const idEleccion = Number(id);
@@ -79,20 +80,24 @@ function EleccionEstudiante() {
       )}
 
       {fase === "postulacion" && (
-        <MiCandidatura idEleccion={idEleccion} enPostulacion puedePostular={puedePostular} />
+        <MiCandidatura idEleccion={idEleccion} fase="postulacion" puedePostular={puedePostular} />
       )}
 
-      {fase === "gracia" && (
+      {fase === "moderacion" && (
         <>
           <Alerta tono="info">
             La postulación ya cerró. La votación inicia el {formatearFecha(eleccion.fecha_inicio)}.
           </Alerta>
-          <MiCandidatura idEleccion={idEleccion} enPostulacion={false} puedePostular={false} />
+          <MiCandidatura idEleccion={idEleccion} fase="moderacion" puedePostular={false} />
           <ListaCandidatos idEleccion={idEleccion} />
         </>
       )}
 
       {fase === "votacion" && <Tarjeton idEleccion={idEleccion} />}
+
+      {fase === "pausada" && (
+        <Alerta tono="aviso">La votación está en pausa. Vuelve a revisar más tarde.</Alerta>
+      )}
 
       {fase === "finalizada" && (
         <Alerta tono="info">

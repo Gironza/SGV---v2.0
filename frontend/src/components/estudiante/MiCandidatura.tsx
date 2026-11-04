@@ -9,25 +9,35 @@ import Badge from "../ui/Badge";
 import Alerta from "../feedback/Alerta";
 import Cargando from "../feedback/Cargando";
 import ConfirmDialog from "../feedback/ConfirmDialog";
+import FotoCandidato from "./FotoCandidato";
+import EditorPropuesta from "./EditorPropuesta";
 import { infoEstadoCandidatura } from "../../utils/candidatura";
 import { mensajeError } from "../../utils/errores";
+import type { Fase } from "../../utils/etapa";
 
 import "../../styles/estudiante.css";
 
 interface Props {
   idEleccion: number;
-  /** Solo en postulación se puede postular o solicitar retiro. */
-  enPostulacion: boolean;
+  /** Etapa en la que se muestra el bloque. */
+  fase: Extract<Fase, "postulacion" | "moderacion">;
   puedePostular: boolean;
 }
 
-/** Bloque "Tu candidatura" del detalle de la elección. */
-export function MiCandidatura({ idEleccion, enPostulacion, puedePostular }: Props) {
+/** Bloque "Tu candidatura" del detalle de la elección.
+ *  - Postularse: solo en postulación y con curso habilitado.
+ *  - Propuesta y foto: solo si la candidatura está aprobada y la etapa es
+ *    postulación (en moderación quedan en solo lectura).
+ *  - Retiro: solo candidaturas aprobadas, hasta antes de la votación; es una
+ *    solicitud que resuelve un admin o docente. */
+export function MiCandidatura({ idEleccion, fase, puedePostular }: Props) {
   const toast = useToast();
   const [mia, setMia] = useState<CandidaturaDetalleOut | null>(null);
   const [cargando, setCargando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
   const [confirmarRetiro, setConfirmarRetiro] = useState(false);
+
+  const enPostulacion = fase === "postulacion";
 
   const cargar = useCallback(async () => {
     try {
@@ -78,7 +88,7 @@ export function MiCandidatura({ idEleccion, enPostulacion, puedePostular }: Prop
 
   // Sin candidatura
   if (!mia) {
-    if (!enPostulacion) return null; // en gracia/votación no tiene sentido mostrarlo
+    if (!enPostulacion) return null; // en moderación no tiene sentido mostrarlo
     return (
       <Panel title="Tu candidatura">
         {puedePostular ? (
@@ -99,27 +109,57 @@ export function MiCandidatura({ idEleccion, enPostulacion, puedePostular }: Prop
   }
 
   // Con candidatura
-  const { etiqueta, tono } = infoEstadoCandidatura(mia.id_estado_candidatura, mia.nombre_estado);
-  const puedeRetirar =
-    enPostulacion &&
-    (mia.id_estado_candidatura === ESTADO_CANDIDATURA.PENDIENTE || mia.id_estado_candidatura === ESTADO_CANDIDATURA.APROBADA);
+  const estado = mia.id_estado_candidatura;
+  const { etiqueta, tono } = infoEstadoCandidatura(estado, mia.nombre_estado);
+  const aprobada = estado === ESTADO_CANDIDATURA.APROBADA;
+  const mostrarContenido = aprobada || estado === ESTADO_CANDIDATURA.RETIRO_SOLICITADO;
+  const puedeEditar = aprobada && enPostulacion;
 
   return (
     <Panel title="Tu candidatura" action={<Badge tone={tono}>{etiqueta}</Badge>}>
       <div className="est-bloque">
-        <p className={mia.propuesta ? "" : "text-muted fst-italic"}>
-          {mia.propuesta || "Todavía no has cargado tu propuesta."}
-        </p>
+        {estado === ESTADO_CANDIDATURA.PENDIENTE && (
+          <div className="cand-aviso">
+            Tu postulación está pendiente de revisión. Cuando la aprueben podrás cargar tu propuesta y tu foto.
+          </div>
+        )}
+
+        {mostrarContenido && (
+          <>
+            <FotoCandidato
+              idCandidato={mia.id_candidato}
+              nombre={mia.nombre}
+              apellido={mia.apellido}
+              foto={mia.foto}
+              editable={puedeEditar}
+              onCambio={cargar}
+            />
+            <EditorPropuesta
+              idCandidato={mia.id_candidato}
+              propuesta={mia.propuesta}
+              editable={puedeEditar}
+              onGuardada={cargar}
+            />
+            {aprobada && !enPostulacion && (
+              <div className="cand-aviso">
+                La postulación ya cerró: tu candidatura está en moderación y ya no se puede editar.
+              </div>
+            )}
+          </>
+        )}
+
         {mia.observaciones && (
           <div className="cand-obs">
             <span>Observaciones del revisor</span>
             {mia.observaciones}
           </div>
         )}
-        {mia.id_estado_candidatura === ESTADO_CANDIDATURA.RETIRO_SOLICITADO && (
+
+        {estado === ESTADO_CANDIDATURA.RETIRO_SOLICITADO && (
           <div className="cand-aviso">Solicitaste retirarte. Queda pendiente la respuesta del revisor.</div>
         )}
-        {puedeRetirar && (
+
+        {aprobada && (
           <div>
             <button type="button" className="btn btn-sm btn-outline-danger" disabled={ocupado} onClick={() => setConfirmarRetiro(true)}>
               Solicitar retiro

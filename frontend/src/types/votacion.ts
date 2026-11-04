@@ -25,6 +25,14 @@ export interface VotoConfirmadoResponse {
   fecha_voto: string;
 }
 
+/** GET /votacion/historial: elecciones en las que votó el estudiante. */
+export interface HistorialVotoOut {
+  id_eleccion: number;
+  titulo: string;
+  fecha_voto?: string | null;
+  codigo_certificado?: string | null;
+}
+
 /** GET /candidatos/eleccion/{id}: el tarjetón sale de aquí. */
 export interface CandidatoOut {
   id_candidato: number;

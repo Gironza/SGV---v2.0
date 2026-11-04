@@ -19,8 +19,16 @@ function enLista(lista: string[], curso: string | null): boolean {
   return lista.length === 0 || curso === null || lista.includes(curso);
 }
 
-// Primero lo accionable: votación, luego postulación, gracia y próximas.
-const ORDEN: Record<Fase, number> = { votacion: 0, postulacion: 1, gracia: 2, antes: 3, desconocida: 4, finalizada: 5 };
+// Primero lo accionable: votación, pausa, postulación, moderación y próximas.
+const ORDEN: Record<Fase, number> = {
+  votacion: 0,
+  pausada: 1,
+  postulacion: 2,
+  moderacion: 3,
+  antes: 4,
+  desconocida: 5,
+  finalizada: 6,
+};
 
 /** Elecciones vigentes del estudiante con su fase. Las finalizadas no se
  *  incluyen: van al historial. */
