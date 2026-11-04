@@ -11,7 +11,9 @@ import Inicio from "./pages/inicio";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
+import Institucion from "./pages/admin/Institucion";
 import Docente from "./pages/Docente";
+import Cuenta from "./pages/Cuenta";
 import Usuarios from "./pages/admin/Usuarios";
 import EstudianteInicio from "./pages/estudiante/Inicio";
 import EleccionesEstudiante from "./pages/estudiante/Elecciones";
@@ -41,8 +43,7 @@ function App() {
 
           {/* PRIVADAS: shell compartido */}
           <Route element={<RutaProtegida rolesPermitidos={[1, 2, 3]}><AppLayout /></RutaProtegida>}>
-            <Route path="/cuenta" element={<PaginaEnConstruccion titulo="Mi cuenta" subtitulo="Perfil y contraseña" etapa="1H" />} />
-
+            <Route path="/cuenta" element={<Cuenta />} />
 
             {/* ADMIN */}
             <Route path="/admin" element={<RutaProtegida rolesPermitidos={[1]} />}>
@@ -53,7 +54,7 @@ function App() {
               <Route path="usuarios" element={<Usuarios />} />
               <Route path="resultados" element={<Resultados />} />
               <Route path="resultados/:id" element={<ResultadoDetalle />} />
-              <Route path="institucion" element={<PaginaEnConstruccion titulo="Institución" subtitulo="Códigos de invitación e información" etapa="1G" />} />
+              <Route path="institucion" element={<Institucion />} />
             </Route>
 
             {/* DOCENTE */}

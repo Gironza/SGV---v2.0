@@ -1,0 +1,12 @@
+/* Institución: códigos de invitación. */
+.inst-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.inst-actualizado { margin: 0; font-size: 13px; color: var(--sgv-muted); }
+.inst-codigo-bloque { display: flex; flex-direction: column; gap: 14px; }
+.inst-desc { margin: 0; font-size: 13.5px; color: var(--sgv-muted); }
+.inst-codigo {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--sgv-bg); border-radius: 10px; padding: 12px 14px;
+}
+.inst-codigo code { font-size: 20px; font-weight: 800; letter-spacing: 0.06em; color: var(--sgv-ink); word-break: break-all; }
+.inst-vacio { margin: 0; padding: 12px 14px; border-radius: 10px; background: #fff7e6; font-size: 13.5px; color: var(--sgv-text); }
+.inst-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
