@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Admin from "./pages/Admin";
 import Docente from "./pages/Docente";
+import Usuarios from "./pages/admin/Usuarios";
 import EstudianteInicio from "./pages/estudiante/Inicio";
 import EleccionesEstudiante from "./pages/estudiante/Elecciones";
 import EleccionEstudiante from "./pages/estudiante/EleccionEstudiante";
@@ -22,6 +23,7 @@ import EleccionNueva from "./pages/admin/EleccionNueva";
 import EleccionDetalle from "./pages/admin/EleccionDetalle";
 import Resultados from "./pages/admin/Resultados";
 import ResultadoDetalle from "./pages/admin/ResultadoDetalle";
+
 
 // Roles: Administrador(1), Docente(2), Estudiante(3).
 // Estructura: una sola ruta de layout (AppLayout) protegida para los 3
@@ -41,8 +43,6 @@ function App() {
           <Route element={<RutaProtegida rolesPermitidos={[1, 2, 3]}><AppLayout /></RutaProtegida>}>
             <Route path="/cuenta" element={<PaginaEnConstruccion titulo="Mi cuenta" subtitulo="Perfil y contraseña" etapa="1H" />} />
 
-            {/* TEMPORAL: prueba de componentes de feedback (borrar al cerrar la Fase 0) */}
-            <Route path="/demo-feedback" element={<DemoFeedback />} />
 
             {/* ADMIN */}
             <Route path="/admin" element={<RutaProtegida rolesPermitidos={[1]} />}>
@@ -50,7 +50,7 @@ function App() {
               <Route path="elecciones" element={<Elecciones />} />
               <Route path="elecciones/nueva" element={<EleccionNueva />} />
               <Route path="elecciones/:id" element={<EleccionDetalle />} />
-              <Route path="usuarios" element={<PaginaEnConstruccion titulo="Usuarios" subtitulo="Gestión de usuarios" etapa="1E" />} />
+              <Route path="usuarios" element={<Usuarios />} />
               <Route path="resultados" element={<Resultados />} />
               <Route path="resultados/:id" element={<ResultadoDetalle />} />
               <Route path="institucion" element={<PaginaEnConstruccion titulo="Institución" subtitulo="Códigos de invitación e información" etapa="1G" />} />
