@@ -10,3 +10,16 @@ export const ESTADO_CANDIDATURA = {
 
 export type EstadoCandidaturaId =
   (typeof ESTADO_CANDIDATURA)[keyof typeof ESTADO_CANDIDATURA];
+
+/** CandidaturaDetalleOut: GET /candidatos/eleccion/{id}/gestion */
+export interface CandidaturaDetalleOut {
+  id_candidato: number;
+  id_eleccion: number;
+  nombre: string;
+  apellido: string;
+  propuesta?: string | null;
+  foto?: string | null;
+  id_estado_candidatura: number;
+  nombre_estado: string;
+  observaciones?: string | null;
+}

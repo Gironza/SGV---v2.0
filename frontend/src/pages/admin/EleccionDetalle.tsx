@@ -6,7 +6,7 @@ import eleccionService from "../../services/eleccion.service";
 import type { EleccionOut } from "../../types/eleccion";
 import ResumenEleccion from "../../components/elecciones/ResumenEleccion";
 import ConfiguracionEleccion from "../../components/elecciones/ConfiguracionEleccion";
-import Alerta from "../../components/feedback/Alerta";
+import ModeracionCandidaturas from "../../components/candidaturas/ModeracionCandidaturas";
 import Cargando from "../../components/feedback/Cargando";
 import EstadoVacio from "../../components/feedback/EstadoVacio";
 import { mensajeError } from "../../utils/errores";
@@ -95,10 +95,7 @@ function EleccionDetalle() {
           onEliminada={() => navigate("/admin/elecciones", { replace: true })}
         />
       ) : (
-        <div className="panel-box">
-          <Alerta tono="info">La moderación de candidaturas (aprobar, rechazar, observaciones y retiros) se construye en la etapa 1C.</Alerta>
-          <EstadoVacio icono="fa-solid fa-user-check" titulo="Candidaturas" descripcion="Próximamente en esta pestaña." />
-        </div>
+        <ModeracionCandidaturas idEleccion={eleccion.id_eleccion} />
       )}
     </>
   );

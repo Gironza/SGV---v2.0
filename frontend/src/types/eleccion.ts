@@ -50,9 +50,9 @@ export interface CambioEstadoResponse extends MensajeResponse {
   etapa: string;
 }
 
-// estados_eleccion. Ids tomados del Admin.tsx anterior (1 = Activa,
-// 2 = Finalizada). TODO: confirmar con el seed del backend (¿3 = Pendiente?).
+// estados_eleccion (seed del backend).
 export const ESTADO_ELECCION = {
   ACTIVA: 1,
   FINALIZADA: 2,
+  PENDIENTE: 3,
 } as const;
