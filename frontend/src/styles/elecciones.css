@@ -1,0 +1,84 @@
+/* Pantallas de elecciones (admin): filtros, tabla y formulario. */
+
+.filtros-eleccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--sgv-border);
+  background: #fff;
+  color: var(--sgv-text);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip span {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--sgv-bg);
+  font-size: 11.5px;
+}
+.chip:hover { background: var(--sgv-bg); }
+.chip.is-on { background: var(--sgv-violet); border-color: var(--sgv-violet); color: #fff; }
+.chip.is-on span { background: rgba(255, 255, 255, 0.25); }
+.filtros-buscar { max-width: 260px; }
+
+.tabla-scroll { overflow-x: auto; }
+.celda-fechas, .celda-cursos { font-size: 12.5px; white-space: nowrap; }
+.celda-fechas span, .celda-cursos span { display: block; }
+.celda-fechas span:first-child::before { content: "Desde "; color: var(--sgv-muted); }
+.celda-fechas span:last-child::before { content: "Hasta "; color: var(--sgv-muted); }
+.celda-cursos { color: var(--sgv-muted); }
+
+/* ---- Formulario ---- */
+.form-eleccion { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+.form-campo { display: flex; flex-direction: column; gap: 4px; }
+.form-campo label { font-size: 13px; font-weight: 600; color: var(--sgv-ink); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-bloque, .selector-cursos {
+  border: 1px solid var(--sgv-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.form-bloque legend, .selector-cursos legend {
+  float: none;
+  width: auto;
+  padding: 0 6px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--sgv-ink);
+}
+.form-acciones { display: flex; justify-content: flex-end; gap: 10px; }
+
+.selector-cursos-ayuda { margin: 0; font-size: 12.5px; color: var(--sgv-muted); }
+.selector-cursos-acciones { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sgv-muted); }
+.selector-cursos-acciones button {
+  border: 0; background: transparent; color: var(--sgv-violet); font-weight: 600; padding: 0; cursor: pointer;
+}
+.selector-cursos-acciones span { margin-left: auto; }
+.selector-cursos-lista { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; }
+.selector-cursos-lista label {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--sgv-border); border-radius: 8px;
+  padding: 4px 10px; font-size: 13px; cursor: pointer; user-select: none;
+}
+.selector-cursos-lista label.is-on { background: #efeaff; border-color: var(--sgv-violet); color: var(--sgv-violet-dark); font-weight: 600; }
+
+@media (max-width: 760px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .filtros-buscar { max-width: 100%; width: 100%; }
+}

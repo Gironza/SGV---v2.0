@@ -4,11 +4,12 @@ interface Props {
   titulo: string;
   subtitulo?: string;
   etapa?: string; // ej. "1A"
+  volverA?: string;
 }
 
 /** Placeholder de las páginas que aún no se construyen. */
-export function PaginaEnConstruccion({ titulo, subtitulo, etapa }: Props) {
-  useTituloPagina(titulo, subtitulo);
+export function PaginaEnConstruccion({ titulo, subtitulo, etapa, volverA }: Props) {
+  useTituloPagina(titulo, subtitulo, volverA);
   return (
     <div className="panel-box" style={{ textAlign: "center", padding: "48px 24px" }}>
       <i className="fa-solid fa-person-digging" style={{ fontSize: 32, color: "var(--sgv-muted)" }}></i>
