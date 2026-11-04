@@ -35,3 +35,24 @@ export interface EleccionCreadaResponse {
   message: string;
   id_eleccion: number;
 }
+
+export interface MensajeResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface GraciaResponse extends MensajeResponse {
+  fecha_fin_inscripcion: string;
+  etapa: string;
+}
+
+export interface CambioEstadoResponse extends MensajeResponse {
+  etapa: string;
+}
+
+// estados_eleccion. Ids tomados del Admin.tsx anterior (1 = Activa,
+// 2 = Finalizada). TODO: confirmar con el seed del backend (¿3 = Pendiente?).
+export const ESTADO_ELECCION = {
+  ACTIVA: 1,
+  FINALIZADA: 2,
+} as const;

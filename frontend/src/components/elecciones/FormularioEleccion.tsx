@@ -12,6 +12,8 @@ interface FormularioEleccionProps {
   cursosDisponibles: string[];
   enviando?: boolean;
   textoEnviar?: string;
+  /** En edición: si se desmarcan todos los cursos, enviar [] (en vez de omitir). */
+  enviarCursosVacios?: boolean;
   onSubmit: (datos: EleccionCreate) => void;
   onCancelar?: () => void;
 }
@@ -22,6 +24,7 @@ export function FormularioEleccion({
   cursosDisponibles,
   enviando = false,
   textoEnviar = "Crear elección",
+  enviarCursosVacios = false,
   onSubmit,
   onCancelar,
 }: FormularioEleccionProps) {
@@ -61,10 +64,9 @@ export function FormularioEleccion({
       fecha_fin_inscripcion: deInputFecha(finInsc),
       fecha_inicio: deInputFecha(inicio),
       fecha_fin: deInputFecha(fin),
-      // Si no se selecciona ninguno se omite el campo.
-      // TODO: confirmar con el backend qué significa "sin cursos".
-      cursos_postulacion: cursosPost.length ? cursosPost : undefined,
-      cursos_votacion: cursosVot.length ? cursosVot : undefined,
+      // Al crear, sin selección se omite el campo (el backend no restringe).
+      cursos_postulacion: cursosPost.length || enviarCursosVacios ? cursosPost : undefined,
+      cursos_votacion: cursosVot.length || enviarCursosVacios ? cursosVot : undefined,
     });
   }
 

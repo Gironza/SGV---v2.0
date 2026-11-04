@@ -18,6 +18,7 @@ import NoEncontrada from "./pages/NoEncontrada";
 import DemoFeedback from "./pages/DemoFeedback";
 import Elecciones from "./pages/admin/Elecciones";
 import EleccionNueva from "./pages/admin/EleccionNueva";
+import EleccionDetalle from "./pages/admin/EleccionDetalle";
 
 // Roles: Administrador(1), Docente(2), Estudiante(3).
 // Estructura: una sola ruta de layout (AppLayout) protegida para los 3
@@ -45,7 +46,7 @@ function App() {
               <Route index element={<Admin />} />
               <Route path="elecciones" element={<Elecciones />} />
               <Route path="elecciones/nueva" element={<EleccionNueva />} />
-              <Route path="elecciones/:id" element={<PaginaEnConstruccion titulo="Detalle de elección" subtitulo="Configuración y candidaturas" etapa="1B" volverA="/admin/elecciones" />} />
+              <Route path="elecciones/:id" element={<EleccionDetalle />} />
               <Route path="usuarios" element={<PaginaEnConstruccion titulo="Usuarios" subtitulo="Gestión de usuarios" etapa="1E" />} />
               <Route path="resultados" element={<PaginaEnConstruccion titulo="Resultados" subtitulo="Estadísticas y exportes" etapa="1D" />} />
               <Route path="institucion" element={<PaginaEnConstruccion titulo="Institución" subtitulo="Códigos de invitación e información" etapa="1G" />} />
