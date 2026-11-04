@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 
 import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
 import RutaProtegida from "./routes/RutaProtegida";
+import RutaPublica from "./routes/RutaPublica";
 import AppLayout from "./components/layout/AppLayout";
 import PaginaEnConstruccion from "./components/ui/PaginaEnConstruccion";
 
@@ -12,6 +14,8 @@ import Admin from "./pages/Admin";
 import Docente from "./pages/Docente";
 import Estudiante from "./pages/Estudiante";
 import EstudianteHistorial from "./pages/EstudianteHistorial";
+import NoEncontrada from "./pages/NoEncontrada";
+import DemoFeedback from "./pages/DemoFeedback";
 
 // Roles: Administrador(1), Docente(2), Estudiante(3).
 // Estructura: una sola ruta de layout (AppLayout) protegida para los 3
@@ -19,16 +23,20 @@ import EstudianteHistorial from "./pages/EstudianteHistorial";
 function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
         <Routes>
           {/* PÚBLICAS */}
           <Route path="/" element={<Inicio />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+          <Route path="/login" element={<RutaPublica><Login /></RutaPublica>} />
+          <Route path="/registro" element={<RutaPublica><Registro /></RutaPublica>} />
 
           {/* PRIVADAS: shell compartido */}
           <Route element={<RutaProtegida rolesPermitidos={[1, 2, 3]}><AppLayout /></RutaProtegida>}>
             <Route path="/cuenta" element={<PaginaEnConstruccion titulo="Mi cuenta" subtitulo="Perfil y contraseña" etapa="1H" />} />
+
+            {/* TEMPORAL: prueba de componentes de feedback (borrar al cerrar la Fase 0) */}
+            <Route path="/demo-feedback" element={<DemoFeedback />} />
 
             {/* ADMIN */}
             <Route path="/admin" element={<RutaProtegida rolesPermitidos={[1]} />}>
@@ -53,9 +61,13 @@ function App() {
               <Route path="elecciones" element={<PaginaEnConstruccion titulo="Elecciones" subtitulo="Postúlate o vota" etapa="3A" />} />
               <Route path="historial" element={<EstudianteHistorial />} />
             </Route>
+
+            {/* 404 dentro del shell */}
+            <Route path="*" element={<NoEncontrada />} />
           </Route>
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

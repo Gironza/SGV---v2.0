@@ -1,0 +1,103 @@
+/* Componentes de feedback: diálogo de confirmación, toasts, estados.
+   Se importa en main.tsx. Usa fallbacks por si las variables del shell
+   (--sgv-*) no están cargadas (ej. en /login). */
+
+/* ---------- Diálogo ---------- */
+.fb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(31, 31, 77, 0.45);
+}
+.fb-dialog {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 50px rgba(31, 31, 77, 0.25);
+}
+.fb-dialog-title { margin: 0 0 8px; font-size: 17px; font-weight: 700; color: var(--sgv-ink, #1f1f4d); }
+.fb-dialog-body { color: var(--sgv-text, #3a3a4a); font-size: 14.5px; margin-bottom: 14px; }
+.fb-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+.fb-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+.fb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.fb-btn-primary { background: var(--sgv-violet, #6c4df6); }
+.fb-btn-primary:hover:not(:disabled) { background: var(--sgv-violet-dark, #5a3ee0); }
+.fb-btn-danger { background: var(--sgv-danger, #dc2626); }
+.fb-btn-danger:hover:not(:disabled) { background: #b91c1c; }
+.fb-btn-warning { background: var(--sgv-warning, #d97706); }
+.fb-btn-warning:hover:not(:disabled) { background: #b45309; }
+.fb-btn-ghost { background: var(--sgv-bg, #f7f7fb); color: var(--sgv-text, #3a3a4a); }
+.fb-btn-ghost:hover:not(:disabled) { background: #ececf5; }
+
+/* ---------- Toasts ---------- */
+.fb-toasts {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.fb-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--sgv-border, #ececf5);
+  border-left-width: 4px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(31, 31, 77, 0.14);
+  font-size: 14px;
+  color: var(--sgv-text, #3a3a4a);
+  animation: fb-entra 0.18s ease-out;
+}
+.fb-toast > span { flex: 1; word-break: break-word; }
+.fb-toast button { border: 0; background: transparent; color: var(--sgv-muted, #7a7a8c); cursor: pointer; padding: 0 2px; }
+.fb-toast-exito { border-left-color: var(--sgv-success, #16a34a); }
+.fb-toast-exito > i:first-child { color: var(--sgv-success, #16a34a); }
+.fb-toast-error { border-left-color: var(--sgv-danger, #dc2626); }
+.fb-toast-error > i:first-child { color: var(--sgv-danger, #dc2626); }
+.fb-toast-aviso { border-left-color: var(--sgv-warning, #d97706); }
+.fb-toast-aviso > i:first-child { color: var(--sgv-warning, #d97706); }
+.fb-toast-info { border-left-color: var(--sgv-blue, #2563eb); }
+.fb-toast-info > i:first-child { color: var(--sgv-blue, #2563eb); }
+
+@keyframes fb-entra {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Estados de carga / vacío ---------- */
+.fb-estado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 16px;
+  color: var(--sgv-muted, #7a7a8c);
+  font-size: 14px;
+}
+.fb-vacio { flex-direction: column; text-align: center; gap: 6px; padding: 40px 16px; }
+.fb-vacio > i { font-size: 30px; margin-bottom: 4px; }
+.fb-vacio > strong { color: var(--sgv-ink, #1f1f4d); font-size: 15px; }
+.fb-vacio > a, .fb-vacio > button { margin-top: 10px; }
