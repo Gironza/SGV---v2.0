@@ -92,7 +92,7 @@ export function ResultadosEleccion({ idEleccion, volverA }: Props) {
 
   const fase = faseDeEtapa(res.etapa);
   const finalizada = fase === "finalizada";
-  const parcial = fase === "votacion";
+  const parcial = fase === "votacion" || fase === "pausada";
   const empatados = res.empatados ?? [];
   const nombresGanadores = new Set(empatados.length > 0 ? empatados : res.ganador ? [res.ganador] : []);
   const candidatos = [...res.candidatos].sort((a, b) => b.total_votos - a.total_votos);
@@ -103,7 +103,7 @@ export function ResultadosEleccion({ idEleccion, volverA }: Props) {
       {/* Aviso / ganador */}
       {parcial && (
         <Alerta tono="info">
-          La votación sigue abierta: estos son resultados <strong>parciales</strong>.{" "}
+          {fase === "pausada" ? "La votación está en pausa" : "La votación sigue abierta"}: estos son resultados <strong>parciales</strong>.{" "}
           <button type="button" className="btn btn-sm btn-outline-primary ms-2" onClick={() => void cargar(true)}>Actualizar</button>
         </Alerta>
       )}

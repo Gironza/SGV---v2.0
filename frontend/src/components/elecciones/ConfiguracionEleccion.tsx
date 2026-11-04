@@ -7,7 +7,7 @@ import Panel from "../ui/Panel";
 import ConfirmDialog from "../feedback/ConfirmDialog";
 import Cargando from "../feedback/Cargando";
 import FormularioEleccion from "./FormularioEleccion";
-import { esFinalizada } from "../../utils/etapa";
+import { faseDe, infoEtapa } from "../../utils/etapa";
 import { aInputFecha, deInputFecha, formatearFecha } from "../../utils/fechas";
 import { mensajeError } from "../../utils/errores";
 
@@ -20,7 +20,7 @@ interface Props {
   onEliminada: () => void;
 }
 
-type Dialogo = null | "activar" | "finalizar" | "eliminar";
+type Dialogo = null | "activar" | "pausar" | "reanudar" | "finalizar" | "eliminar";
 
 /** Pestaña "Configuración": editar, gracia, estado, publicación y eliminar.
  *  El que decide si una acción procede es el backend (409/403): aquí se
@@ -28,7 +28,10 @@ type Dialogo = null | "activar" | "finalizar" | "eliminar";
 export function ConfiguracionEleccion({ eleccion, onActualizada, onEliminada }: Props) {
   const toast = useToast();
   const id = eleccion.id_eleccion;
-  const finalizada = esFinalizada(eleccion);
+  const fase = faseDe(eleccion);
+  const finalizada = fase === "finalizada";
+  const pausada = fase === "pausada";
+  const enVotacion = fase === "votacion";
 
   const [ocupado, setOcupado] = useState(false);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
@@ -123,6 +126,14 @@ export function ConfiguracionEleccion({ eleccion, onActualizada, onEliminada }: 
         setDialogo(null);
         setFechaReapertura("");
       }
+    } else if (dialogo === "pausar" || dialogo === "reanudar") {
+      // Pausar = estado Pendiente (3); reanudar = estado Activa (1).
+      const pausar = dialogo === "pausar";
+      const ok = await ejecutar(
+        () => eleccionService.cambiarEstado(id, pausar ? ESTADO_ELECCION.PENDIENTE : ESTADO_ELECCION.ACTIVA),
+        pausar ? "Votación en pausa." : "Votación reanudada."
+      );
+      if (ok) setDialogo(null);
     } else if (dialogo === "finalizar") {
       const ok = await ejecutar(
         () => eleccionService.cambiarEstado(id, ESTADO_ELECCION.FINALIZADA),
@@ -237,17 +248,28 @@ export function ConfiguracionEleccion({ eleccion, onActualizada, onEliminada }: 
       <Panel title="Estado de la elección">
         <div className="config-seccion">
           <p>
-            Estado actual: <strong>{eleccion.nombre_estado}</strong>
-            {finalizada ? ". Puedes reabrirla indicando una nueva fecha de cierre." : "."}
+            Etapa actual: <strong>{infoEtapa(eleccion.etapa).etiqueta}</strong>.{" "}
+            {pausada && "La votación está en pausa: los estudiantes no pueden votar hasta que la reanudes."}
+            {finalizada && "Puedes reabrirla indicando una nueva fecha de cierre."}
           </p>
           <div className="config-acciones">
-            {(finalizada || eleccion.id_estado_eleccion !== ESTADO_ELECCION.ACTIVA) && (
+            {enVotacion && (
+              <button type="button" className="fb-btn fb-btn-warning" disabled={ocupado} onClick={() => setDialogo("pausar")}>
+                <i className="fa-solid fa-pause me-2"></i>Pausar votación
+              </button>
+            )}
+            {pausada && (
+              <button type="button" className="fb-btn fb-btn-primary" disabled={ocupado} onClick={() => setDialogo("reanudar")}>
+                <i className="fa-solid fa-play me-2"></i>Reanudar votación
+              </button>
+            )}
+            {(fase === "antes" || fase === "postulacion" || fase === "moderacion" || finalizada) && (
               <button type="button" className="fb-btn fb-btn-primary" disabled={ocupado} onClick={() => setDialogo("activar")}>
-                {finalizada ? "Reabrir elección" : "Activar elección"}
+                {finalizada ? "Reabrir elección" : "Abrir votación ahora"}
               </button>
             )}
             {!finalizada && (
-              <button type="button" className="fb-btn fb-btn-warning" disabled={ocupado} onClick={() => setDialogo("finalizar")}>
+              <button type="button" className="fb-btn fb-btn-danger" disabled={ocupado} onClick={() => setDialogo("finalizar")}>
                 Finalizar elección
               </button>
             )}
@@ -296,13 +318,13 @@ export function ConfiguracionEleccion({ eleccion, onActualizada, onEliminada }: 
       {/* DIÁLOGOS */}
       <ConfirmDialog
         abierto={dialogo === "activar"}
-        titulo={finalizada ? "Reabrir elección" : "Activar elección"}
+        titulo={finalizada ? "Reabrir elección" : "Abrir votación ahora"}
         mensaje={
           finalizada
             ? "La elección volverá a estar activa. Indica hasta cuándo seguirá abierta la votación."
             : "Si la elección aún no ha empezado, la votación se abrirá ahora mismo. ¿Quieres continuar?"
         }
-        textoConfirmar={finalizada ? "Reabrir" : "Activar"}
+        textoConfirmar={finalizada ? "Reabrir" : "Abrir votación"}
         cargando={ocupado}
         onConfirmar={() => void confirmarEstado()}
         onCancelar={() => setDialogo(null)}
@@ -315,6 +337,27 @@ export function ConfiguracionEleccion({ eleccion, onActualizada, onEliminada }: 
           </div>
         )}
       </ConfirmDialog>
+
+      <ConfirmDialog
+        abierto={dialogo === "pausar"}
+        titulo="Pausar votación"
+        mensaje="Los estudiantes no podrán votar mientras esté en pausa. Podrás reanudarla cuando quieras."
+        tono="warning"
+        textoConfirmar="Pausar"
+        cargando={ocupado}
+        onConfirmar={() => void confirmarEstado()}
+        onCancelar={() => setDialogo(null)}
+      />
+
+      <ConfirmDialog
+        abierto={dialogo === "reanudar"}
+        titulo="Reanudar votación"
+        mensaje="La votación se abrirá de nuevo y los estudiantes podrán votar."
+        textoConfirmar="Reanudar"
+        cargando={ocupado}
+        onConfirmar={() => void confirmarEstado()}
+        onCancelar={() => setDialogo(null)}
+      />
 
       <ConfirmDialog
         abierto={dialogo === "finalizar"}

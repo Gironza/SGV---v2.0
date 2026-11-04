@@ -17,6 +17,12 @@ import "../../styles/elecciones.css";
 
 type Filtro = "todas" | "votacion" | "finalizada";
 
+/** En votación o en pausa: la elección sigue en curso. */
+function enCurso(e: EleccionOut): boolean {
+  const f = faseDe(e);
+  return f === "votacion" || f === "pausada";
+}
+
 /** Selector: elecciones con resultados (en votación o finalizadas). */
 function Resultados() {
   useTituloPagina("Resultados", "Estadísticas, reportes y exportes");
@@ -31,7 +37,7 @@ function Resultados() {
     setError("");
     try {
       const todas = await eleccionService.listar();
-      setElecciones(todas.filter((e) => ["votacion", "finalizada"].includes(faseDe(e))));
+      setElecciones(todas.filter((e) => ["votacion", "pausada", "finalizada"].includes(faseDe(e))));
     } catch (err) {
       setError(await mensajeError(err, "No se pudieron cargar las elecciones."));
     } finally {
@@ -46,12 +52,12 @@ function Resultados() {
   const visibles = useMemo(
     () =>
       elecciones
-        .filter((e) => filtro === "todas" || faseDe(e) === filtro)
+        .filter((e) => filtro === "todas" || (filtro === "votacion" ? enCurso(e) : faseDe(e) === filtro))
         .sort((a, b) => b.fecha_fin.localeCompare(a.fecha_fin)),
     [elecciones, filtro]
   );
 
-  const nVotacion = elecciones.filter((e) => faseDe(e) === "votacion").length;
+  const nVotacion = elecciones.filter(enCurso).length;
   const nFinalizadas = elecciones.length - nVotacion;
 
   return (
