@@ -1,8 +1,9 @@
 {
-  "name": "SGV - Frontend",
+  "name": "sgv-frontend",
   "private": true,
   "version": "2.0.0",
   "type": "module",
+  "packageManager": "12.18.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

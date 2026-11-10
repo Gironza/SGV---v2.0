@@ -1,6 +1,6 @@
 // Única fuente de la URL del backend. En Docker se inyecta como variable
 // de build (VITE_API_URL). Sin barra final.
-const raw = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+const raw = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 export const API_URL: string = String(raw).replace(/\/+$/, "");
 
