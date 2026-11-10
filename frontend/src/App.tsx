@@ -10,7 +10,7 @@ import PaginaEnConstruccion from "./components/ui/PaginaEnConstruccion";
 import Inicio from "./pages/inicio";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
-import Admin from "./pages/Admin";
+import Dashboard from "./pages/admin/Dashboard";
 import Institucion from "./pages/admin/Institucion";
 import Docente from "./pages/Docente";
 import Cuenta from "./pages/Cuenta";
@@ -47,7 +47,7 @@ function App() {
 
             {/* ADMIN */}
             <Route path="/admin" element={<RutaProtegida rolesPermitidos={[1]} />}>
-              <Route index element={<Admin />} />
+              <Route index element={<Dashboard />} />
               <Route path="elecciones" element={<Elecciones />} />
               <Route path="elecciones/nueva" element={<EleccionNueva />} />
               <Route path="elecciones/:id" element={<EleccionDetalle />} />
@@ -55,6 +55,7 @@ function App() {
               <Route path="resultados" element={<Resultados />} />
               <Route path="resultados/:id" element={<ResultadoDetalle />} />
               <Route path="institucion" element={<Institucion />} />
+
             </Route>
 
             {/* DOCENTE */}

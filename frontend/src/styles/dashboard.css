@@ -1,0 +1,17 @@
+/* Dashboard del admin */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start; }
+.dash-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.dash-lista li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--sgv-border); border-radius: 10px; padding: 12px 14px;
+}
+.dash-item-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.dash-item-info strong { color: var(--sgv-ink); font-size: 14px; }
+.dash-item-info small { color: var(--sgv-muted); font-size: 12.5px; }
+.dash-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-etapas { display: flex; flex-wrap: wrap; gap: 12px; }
+.dash-etapa {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--sgv-bg); border-radius: 10px; padding: 10px 14px;
+}
+.dash-etapa strong { font-size: 18px; color: var(--sgv-ink); }
