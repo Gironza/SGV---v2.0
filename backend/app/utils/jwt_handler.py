@@ -3,11 +3,17 @@ import hmac
 import os
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
+from dotenv import load_dotenv
 
-
-
+# Carga el .env de app/ (igual que config/database.py). En Docker o Render
+# las variables ya vienen del entorno y esto no las pisa.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("Falta la variable de entorno JWT_SECRET_KEY")
+
 ALGORITHM = "HS256"
 EXPIRACION_MINUTOS = 60 * 8  #8 horas
 EXPIRACION_RECUPERACION_MINUTOS = 30

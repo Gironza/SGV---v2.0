@@ -1,4 +1,5 @@
 import logging
+import os
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,13 +28,21 @@ logging.basicConfig(
 #app
 app = FastAPI(title="SGV", version="2.0.0")
 
-
 #cors
+# Los orígenes permitidos se leen de la variable CORS_ORIGINS (separados por coma).
+# Por defecto quedan los de desarrollo y los del docker compose.
+origenes_permitidos = [
+    origen.strip()
+    for origen in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3001"
+    ).split(",")
+    if origen.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173",
-        "http://localhost:3001",
-        "http://localhost:5173",],  # el origen exacto de Vite (React - Frontend)
+    allow_origins=origenes_permitidos,
     allow_credentials=False,  # No se necesitan cookies, porque esta el header
     allow_methods=["*"],
     allow_headers=["*"],

@@ -25,6 +25,8 @@ class Database:
         self.password = os.getenv("DB_PASSWORD", "app")
         self.database = os.getenv("DB_NAME", "appdb")
         self.port = os.getenv("DB_PORT", "5432")
+        # "prefer" funciona con el postgres local de docker; en Supabase se usa "require"
+        self.sslmode = os.getenv("DB_SSLMODE", "prefer")
 
     def obtener_conexion(self):
         try:
@@ -34,6 +36,7 @@ class Database:
                 password=self.password,
                 dbname=self.database,
                 port=self.port,
+                sslmode=self.sslmode,
                 connect_timeout=5  # sin esto, con la BD caída la petición puede quedarse colgada
             )
         except Exception as e:
